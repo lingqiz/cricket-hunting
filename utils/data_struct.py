@@ -94,6 +94,15 @@ class SessionData:
 
         return base_shift, n_frame
 
+    def all_video(self):
+        n_trigger = np.where(self.triggered == 1)[0].shape[0]
+
+        if n_trigger == 0:
+            self.trial_video(0)
+        else:
+            for idx in range(n_trigger):
+                self.trial_video(idx)
+
     def trial_video(self, trial_idx):
         base_shift, n_frame = self._frame_index(trial_idx)
 
