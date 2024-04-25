@@ -19,6 +19,6 @@ data = all_data[SES_IDX]
 length = int(data.video.get(cv2.CAP_PROP_FRAME_COUNT))
 print('video frame', length)
 print('data length', *data.time.shape)
-print('num cricket', np.where(data.triggered == 1)[0])
+print('cricket time', np.where(data.triggered == 1)[0])
 
 data.all_video()
