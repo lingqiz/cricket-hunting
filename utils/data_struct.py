@@ -104,8 +104,8 @@ class SessionData:
                 self.trial_video(idx)
 
     def trial_video(self, trial_idx):
+        print('%s s%d, t%d' % (self.name, self.session, trial_idx))
         self.start_idx, self.n_frame = self._frame_index(trial_idx)
-
         fig, axs = plt.subplots(1, 2, figsize=(20, 10))
 
         # left plot
