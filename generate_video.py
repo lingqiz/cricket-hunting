@@ -21,4 +21,5 @@ print('video frame', length)
 print('data length', *data.time.shape)
 print('cricket time', np.where(data.triggered == 1)[0])
 
+# generate video for the session
 data.all_video()

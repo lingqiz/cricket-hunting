@@ -187,7 +187,7 @@ class SessionData:
 
         # video path
         target_fps = 10
-        file_path = os.path.join('./data', self.name)
+        file_path = os.path.join('./data/video', self.name)
         file_name = 's%d_t%d' % (self.session, trial_idx) + '.mp4'
 
         if not os.path.exists(file_path):
