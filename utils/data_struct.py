@@ -82,17 +82,17 @@ class SessionData:
 
         # with cricket catch
         if trial_idx == 0:
-            base_shift = 0
+            start_idx = 0
             n_frame = trigger_time[0] + ISI_FRAME
         else:
-            base_shift = trigger_time[trial_idx - 1] + int(ISI_FRAME / 2)
-            n_frame = trigger_time[trial_idx] - base_shift + ISI_FRAME
+            start_idx = trigger_time[trial_idx - 1] + int(ISI_FRAME / 2)
+            n_frame = trigger_time[trial_idx] - start_idx + ISI_FRAME
 
         # check if end of session
-        if base_shift + n_frame > session_length:
-            n_frame = session_length - base_shift
+        if start_idx + n_frame > session_length:
+            n_frame = session_length - start_idx
 
-        return base_shift, n_frame
+        return start_idx, n_frame
 
     def all_video(self):
         n_trigger = np.where(self.triggered == 1)[0].shape[0]
@@ -104,7 +104,7 @@ class SessionData:
                 self.trial_video(idx)
 
     def trial_video(self, trial_idx):
-        base_shift, n_frame = self._frame_index(trial_idx)
+        self.start_idx, self.n_frame = self._frame_index(trial_idx)
 
         fig, axs = plt.subplots(1, 2, figsize=(20, 10))
 
@@ -141,7 +141,7 @@ class SessionData:
         self._chirp_active = False
         self._chirp_point = None
         self._step_count = 0
-        pbar = tqdm.tqdm(total=n_frame + 1, position=0, leave=True)
+        pbar = tqdm.tqdm(total=self.n_frame + 1, position=0, leave=True)
 
         def animate(i):
             axs[0].set_title('Frame %d, Time %.3f Sec' % (i, self.time[i]))
@@ -171,18 +171,18 @@ class SessionData:
                 y = self.y[i] + radius * np.sin(angle)
                 axs[0].text(x, y, str(self._chirp_count), fontsize=10, color='black')
 
-            ll.set_data(self.x[:i], self.y[:i])
+            ll.set_data(self.x[self.start_idx:i], self.y[self.start_idx:i])
             circle.center = (self.x[i], self.y[i])
             im.set_data(self.get_frame(i))
 
             pbar.update(1)
 
         # shift indexing
-        animate_shifted = lambda i: animate(i + base_shift)
+        animate_shifted = lambda i: animate(i + self.start_idx)
 
         # create video
         ani = animation.FuncAnimation(fig, animate_shifted,
-                                    frames=n_frame,
+                                    frames=self.n_frame,
                                     interval=10)
 
         # video path
