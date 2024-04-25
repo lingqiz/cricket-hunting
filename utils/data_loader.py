@@ -68,9 +68,10 @@ fl_list = os.listdir(base_dir)
 fl_list.sort()
 for fl in fl_list:
     # extract date, time, and mice id from the file name
+    # name format: 2024-02-22T09_46_32_ p16_all_params_file.csv
     date_str = fl[:10]
     time_str = fl[11:19]
-    mice_str = fl[21:24]
+    mice_str = fl[-23:-20]
 
     # find the folder with the same date
     rig_folder = os.path.join(video_base, date_str.replace('-', ''))
