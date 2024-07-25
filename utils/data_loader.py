@@ -78,7 +78,7 @@ for fl in fl_list:
 
     # read all files in the folder with .avi extension
     rig_files = os.listdir(rig_folder)
-    video_files = [x for x in rig_files if x.endswith('.avi')]
+    video_files = [x for x in rig_files if x.startswith('video_basler_') and x.endswith('.avi')]
     video_time = [time_diff(x[-12:-4], time_str) for x in video_files]
     video_file = video_files[np.argmin(video_time)]
 
