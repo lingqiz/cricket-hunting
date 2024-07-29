@@ -176,7 +176,7 @@ class SessionData:
                 self._chirp_point = targets[self.chirp_loc[i]]
                 self._chirp_point.set_facecolor('b')
 
-                axs[0].scatter(self.x[i], self.y[i], marker='+',
+                axs[0].scatter(self.x[i], self.y[i], marker='s',
                                color=colors[self._chirp_count - 1])
 
             ll.set_data(self.x[self.start_idx:i], self.y[self.start_idx:i])

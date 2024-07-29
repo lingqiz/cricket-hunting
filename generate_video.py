@@ -5,8 +5,8 @@ from utils.data_loader import *
 from utils.data_struct import *
 
 # read in name and index from command line
-NAME = sys.argv[1]
-SES_IDX = int(sys.argv[2])
+NAME = 'P16'
+SESS = [10, 11, 12, 13, 14]
 
 all_files = P_MICE[NAME]
 all_data = []
@@ -15,11 +15,14 @@ for idx, file in enumerate(all_files):
     data = SessionData(NAME, idx, data_frame, file[1])
     all_data.append(data)
 
-data = all_data[SES_IDX]
-length = int(data.video.get(cv2.CAP_PROP_FRAME_COUNT))
-print('video frame', length)
-print('data length', *data.time.shape)
-print('cricket time', np.where(data.triggered == 1)[0])
+for ses_idx in SESS:
 
-# generate video for the session
-data.all_video()
+    data = all_data[ses_idx]
+    length = int(data.video.get(cv2.CAP_PROP_FRAME_COUNT))
+    print('video frame', length)
+    print('data length', *data.time.shape)
+    print('cricket time', np.where(data.triggered == 1)[0])
+
+    # generate video for the session
+    print('gennrating video for session', ses_idx)
+    data.all_video()
