@@ -5,7 +5,7 @@ from utils.data_loader import *
 from utils.data_struct import *
 
 # read in name and index from command line
-NAME = 'P16'
+NAME = 'p16'
 SESS = [10, 11, 12, 13, 14]
 
 all_files = P_MICE[NAME]
