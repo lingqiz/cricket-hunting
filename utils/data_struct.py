@@ -40,7 +40,13 @@ class SessionData:
         self.triggered = self._int_array(df['triggered'].to_numpy())
 
         # video
-        self.video = cv2.VideoCapture(video_path)
+        split_path = video_path.split('/')
+        split_path[-1] = 'corrected_' + split_path[-1][:-4] + '.mp4'
+        corrected_path = '/'.join(split_path)
+        if os.path.exists(corrected_path):
+            self.video = cv2.VideoCapture(corrected_path)
+        else:
+            self.video = cv2.VideoCapture(video_path)
 
     def _target(self, loc):
         loc = loc[1:-1].split(',')
@@ -71,7 +77,8 @@ class SessionData:
                     facecolor='w', edgecolor='g',lw=1))
 
     def _frame_index(self, trial_idx):
-        ISI_FRAME = 540
+        # Average frame rate * 30 sec ~= 535 frames
+        ISI_FRAME = 550
 
         trigger_time = np.where(self.triggered == 1)[0]
         session_length = self.time.shape[0]
@@ -84,6 +91,7 @@ class SessionData:
         if trial_idx == 0:
             start_idx = 0
             n_frame = trigger_time[0] + ISI_FRAME
+
         else:
             start_idx = trigger_time[trial_idx - 1] + int(ISI_FRAME / 2)
             n_frame = trigger_time[trial_idx] - start_idx + ISI_FRAME
@@ -106,6 +114,12 @@ class SessionData:
     def trial_video(self, trial_idx):
         print('%s s%d, t%d' % (self.name, self.session, trial_idx))
         self.start_idx, self.n_frame = self._frame_index(trial_idx)
+
+        n_chip = self.chirped[self.start_idx:self.start_idx + self.n_frame].sum()
+        print('number of chirps: %d' % n_chip)
+        # create a continous color map
+        colors = plt.cm.viridis(np.linspace(0, 1, n_chip))
+
         fig, axs = plt.subplots(1, 2, figsize=(20, 10))
 
         # left plot
@@ -162,14 +176,8 @@ class SessionData:
                 self._chirp_point = targets[self.chirp_loc[i]]
                 self._chirp_point.set_facecolor('b')
 
-                axs[0].scatter(self.x[i], self.y[i], marker='+', c='r')
-
-                # write text next to the chirp point
-                radius = 35
-                angle = np.random.uniform(-np.pi, np.pi)
-                x = self.x[i] + radius * np.cos(angle)
-                y = self.y[i] + radius * np.sin(angle)
-                axs[0].text(x, y, str(self._chirp_count), fontsize=10, color='black')
+                axs[0].scatter(self.x[i], self.y[i], marker='+',
+                               color=colors[self._chirp_count - 1])
 
             ll.set_data(self.x[self.start_idx:i], self.y[self.start_idx:i])
             circle.center = (self.x[i], self.y[i])
