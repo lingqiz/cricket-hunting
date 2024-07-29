@@ -60,28 +60,35 @@ def time_diff(time1, time2):
     # Calculate the difference in seconds
     return abs(seconds1 - seconds2)
 
+def load_data(dict, base_dir):
+    fl_list = os.listdir(base_dir)
+    fl_list.sort()
+    for fl in fl_list:
+        # extract date, time, and mice id from the file name
+        # name format: 2024-02-22T09_46_32_ p16_all_params_file.csv
+        date_str = fl[:10]
+        time_str = fl[11:19]
+        mice_str = fl[-23:-20]
+
+        # find the folder with the same date
+        rig_folder = os.path.join(video_base, date_str.replace('-', ''))
+
+        # read all files in the folder with .avi extension
+        rig_files = os.listdir(rig_folder)
+        video_files = [x for x in rig_files if x.startswith('video_basler_') and x.endswith('.avi')]
+        video_time = [time_diff(x[-12:-4], time_str) for x in video_files]
+        video_file = video_files[np.argmin(video_time)]
+
+        # add file to list
+        dict[mice_str].append((os.path.join(base_dir, fl),
+                               os.path.join(rig_folder, video_file)))
+
+# b12b13 (2023 Fall)
+B_MICE = {'b12': [], 'b13': []}
+base_dir = './data/b12b13'
+load_data(B_MICE, base_dir)
+
 # p16p17p18 (2024 Spring)
 P_MICE = {'p16': [], 'p17': [], 'p18': []}
 base_dir = './data/p16p17p18'
-
-fl_list = os.listdir(base_dir)
-fl_list.sort()
-for fl in fl_list:
-    # extract date, time, and mice id from the file name
-    # name format: 2024-02-22T09_46_32_ p16_all_params_file.csv
-    date_str = fl[:10]
-    time_str = fl[11:19]
-    mice_str = fl[-23:-20]
-
-    # find the folder with the same date
-    rig_folder = os.path.join(video_base, date_str.replace('-', ''))
-
-    # read all files in the folder with .avi extension
-    rig_files = os.listdir(rig_folder)
-    video_files = [x for x in rig_files if x.startswith('video_basler_') and x.endswith('.avi')]
-    video_time = [time_diff(x[-12:-4], time_str) for x in video_files]
-    video_file = video_files[np.argmin(video_time)]
-
-    # add file to list
-    P_MICE[mice_str].append((os.path.join(base_dir, fl),
-                            os.path.join(rig_folder, video_file)))
+load_data(P_MICE, base_dir)
