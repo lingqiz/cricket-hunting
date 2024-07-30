@@ -5,6 +5,8 @@ from datetime import datetime
 
 ZEBER_TO_DLC = 1896 / 72248
 ZABER_TO_MM = 508 / 72248
+DLC_TO_MM = ZABER_TO_MM / ZEBER_TO_DLC
+TRK_CTR = 948
 
 def tile_angle():
     '''

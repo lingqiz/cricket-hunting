@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import tqdm
 import os
-from .data_loader import ZABER_TO_MM, TILE_CENTER, TILE_RAD_MM, TILE_ANGLE
+from .data_loader import ZABER_TO_MM, DLC_TO_MM, TRK_CTR, TILE_CENTER, TILE_RAD_MM, TILE_ANGLE
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -17,13 +17,16 @@ class SessionData:
         self.name = name
         self.session = ses
 
-        # x-y corrdinates
-        self.zaber_x = df['zaber_x'].to_numpy()
-        self.zaber_y = df['zaber_y'].to_numpy()
+        # x-y corrdinates, use mm units
+        self.zaber_x = df['zaber_x'].to_numpy() * ZABER_TO_MM
+        self.zaber_y = df['zaber_y'].to_numpy() * ZABER_TO_MM
 
-        # use mm units
-        self.x = self.zaber_x * ZABER_TO_MM
-        self.y = self.zaber_y * ZABER_TO_MM
+        self.dlc_x = (df['dlc_x'].to_numpy() - TRK_CTR) * DLC_TO_MM
+        self.dlc_y = (df['dlc_y'].to_numpy() - TRK_CTR) * DLC_TO_MM
+
+        # tracking coordinates
+        self.x = self.zaber_x - self.dlc_x
+        self.y = self.zaber_y + self.dlc_y
 
         # cricket tiles
         self.zaber_target = self._target(df['locations'][0])
