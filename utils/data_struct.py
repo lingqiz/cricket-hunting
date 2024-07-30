@@ -53,6 +53,10 @@ class SessionData:
         else:
             self.video = cv2.VideoCapture(video_path)
 
+        # cricket catch
+        self.n_catch = np.sum(self.triggered)
+        self.trigger_time = np.where(self.triggered == 1)[0]
+
     def _target(self, loc):
         loc = loc[1:-1].split(',')
         loc = np.array([float(l) for l in loc])
@@ -83,7 +87,8 @@ class SessionData:
 
     def _frame_index(self, trial_idx):
         # Average frame rate * 30 sec ~= 535 frames
-        ISI_FRAME = 550
+        PREFIX_FRAME = 500
+        APPEND_FRAME = 550
 
         trigger_time = np.where(self.triggered == 1)[0]
         session_length = self.time.shape[0]
@@ -95,11 +100,11 @@ class SessionData:
         # with cricket catch
         if trial_idx == 0:
             start_idx = 0
-            n_frame = trigger_time[0] + ISI_FRAME
+            n_frame = trigger_time[0] + APPEND_FRAME
 
         else:
-            start_idx = trigger_time[trial_idx - 1] + int(ISI_FRAME / 2)
-            n_frame = trigger_time[trial_idx] - start_idx + ISI_FRAME
+            start_idx = trigger_time[trial_idx - 1] + PREFIX_FRAME
+            n_frame = trigger_time[trial_idx] - start_idx + APPEND_FRAME
 
         # check if end of session
         if start_idx + n_frame > session_length:
