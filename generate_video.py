@@ -8,7 +8,9 @@ from utils.data_struct import *
 NAME = 'p16'
 SESS = [10, 11, 12, 13, 14]
 
+# B_MICE or P_MICE
 all_files = P_MICE[NAME]
+
 all_data = []
 for idx, file in enumerate(all_files):
     data_frame = pd.read_csv(file[0], low_memory=False)
