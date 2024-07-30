@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import sys
 from utils.data_loader import *
 from utils.data_struct import *
 
