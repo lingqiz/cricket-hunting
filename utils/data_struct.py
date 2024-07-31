@@ -92,15 +92,6 @@ class SessionData:
 
         return cv2.resize(frame, dsize=None, fx=0.5, fy=0.5)
 
-    def _draw_arena(self, plot_ax):
-            for idx in range(len(TILE_CENTER[0])):
-                plot_ax.add_patch(patches.RegularPolygon(
-                    (TILE_CENTER[0][idx],
-                     TILE_CENTER[1][idx]),
-                    numVertices=6, radius=TILE_RAD_MM,
-                    orientation=TILE_ANGLE,
-                    facecolor='w', edgecolor='g',lw=1))
-
     # note that average frame rate * 30 sec ISI ~= 535 frames
     def _trial_index(self, trial_idx, prepend=ISI_FRAME, append=0):
         trigger_time = np.where(self.triggered == 1)[0]
@@ -151,7 +142,7 @@ class SessionData:
 
         # left plot
         # draw tiles
-        self._draw_arena(axs[0])
+        self.draw_arena(axs[0])
 
         # trajectory and target
         ll, = axs[0].plot([], [], 'orange', alpha=0.5)
@@ -233,6 +224,17 @@ class SessionData:
         ani.save(os.path.join(file_path, file_name), writer=writer)
         pbar.close()
 
+    @staticmethod
+    def draw_arena(plot_ax, alpha=1):
+            for idx in range(len(TILE_CENTER[0])):
+                plot_ax.add_patch(patches.RegularPolygon(
+                    (TILE_CENTER[0][idx],
+                     TILE_CENTER[1][idx]),
+                    numVertices=6, radius=TILE_RAD_MM,
+                    orientation=TILE_ANGLE,
+                    facecolor='w', edgecolor='g',
+                    lw=1, alpha=alpha))
+
 
 class TrialData:
 
@@ -256,6 +258,10 @@ class TrialData:
 
         self.catch = catch
 
-        # filter x, y data
+        # x, y data
         self.x = x
         self.y = y
+
+        # chirp coordinates
+        self.chirp_x = x[chirp == 1]
+        self.chirp_y = y[chirp == 1]
