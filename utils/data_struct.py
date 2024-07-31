@@ -12,6 +12,7 @@ import matplotlib.animation as animation
 from matplotlib import patches
 matplotlib.rcParams["image.origin"] = "lower"
 
+
 class SessionData:
 
     def __init__(self, name, ses, df, video_path):
@@ -59,23 +60,18 @@ class SessionData:
 
     def to_trials(self):
         if self.n_catch == 0:
-            return [(*self._construct_trial(0), False)]
+            trial = self._construct_trial(0)
+            trial.catch = False
+            return [trial]
 
-        trials = []
-        for idx in range(self.n_catch):
-            trials.append((*self._construct_trial(idx), True))
-
-        return trials
+        return [self._construct_trial(idx) for idx in range(self.n_catch)]
 
     def _construct_trial(self, trial_idx):
         start_idx, n_frame = self._trial_index(trial_idx)
         end_idx = start_idx + n_frame
 
-        trial_lenth = self.time[end_idx-1] - self.time[start_idx]
-        trial_chirp = self.chirped[start_idx:end_idx].sum()
-        trial_target = self.target[:, trial_idx]
-
-        return trial_lenth, trial_chirp, trial_target
+        return TrialData(self.name, self.session, self.time[start_idx:end_idx], self.chirped[start_idx:end_idx],
+                         self.x[start_idx:end_idx], self.y[start_idx:end_idx], self.target, self.chirp_loc[start_idx:end_idx])
 
     def _target(self, loc):
         loc = loc[1:-1].split(',')
@@ -106,7 +102,7 @@ class SessionData:
                     facecolor='w', edgecolor='g',lw=1))
 
     # note that average frame rate * 30 sec ISI ~= 535 frames
-    def _trial_index(self, trial_idx, prepend=ISI_FRAME, append=10):
+    def _trial_index(self, trial_idx, prepend=ISI_FRAME, append=0):
         trigger_time = np.where(self.triggered == 1)[0]
         session_length = self.time.shape[0]
 
@@ -236,3 +232,30 @@ class SessionData:
         writer = animation.writers['ffmpeg'](fps=target_fps, bitrate=4096)
         ani.save(os.path.join(file_path, file_name), writer=writer)
         pbar.close()
+
+
+class TrialData:
+
+    def __init__(self, name, session, time, chirp,
+                 x, y, targets, chirp_loc, catch=True):
+
+        # record trial information
+        self.name = name
+        self.session = session
+
+        self.time = time
+        self.length = time[-1] - time[0]
+
+        self.chirp = chirp
+        self.n_chirp = np.sum(chirp)
+
+        self.targets = targets
+        chirp_loc = np.sort(np.unique(chirp_loc))
+        assert len(chirp_loc) >= 2 and len(chirp_loc) <= 3
+        self.target = targets[:, chirp_loc[-1]]
+
+        self.catch = catch
+
+        # filter x, y data
+        self.x = x
+        self.y = y
