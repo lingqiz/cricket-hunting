@@ -3,8 +3,8 @@ import numpy as np
 import tqdm
 import os
 
-from .data_loader import ZABER_TO_MM, DLC_TO_MM, TRK_CTR, \
-                        TILE_CENTER, TILE_RAD_MM, TILE_ANGLE
+from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI_FRAME, \
+                        TRK_CTR, TILE_CENTER, TILE_RAD_MM, TILE_ANGLE
 
 import matplotlib
 import matplotlib.pyplot as plt

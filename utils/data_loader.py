@@ -3,10 +3,14 @@ import pandas as pd
 import math, os
 from datetime import datetime
 
+# unit conversions
 ZEBER_TO_DLC = 1896 / 72248
 ZABER_TO_MM = 508 / 72248
 DLC_TO_MM = ZABER_TO_MM / ZEBER_TO_DLC
 TRK_CTR = 948
+
+# 30 sec ISI ~= 535 frames
+ISI_FRAME = 500
 
 def tile_angle():
     '''
@@ -94,3 +98,5 @@ load_data(B_MICE, base_dir)
 P_MICE = {'p16': [], 'p17': [], 'p18': []}
 base_dir = './data/p16p17p18'
 load_data(P_MICE, base_dir)
+
+ALL_MICE = {**B_MICE, **P_MICE}
