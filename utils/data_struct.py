@@ -57,6 +57,26 @@ class SessionData:
         self.n_catch = np.sum(self.triggered)
         self.trigger_time = np.where(self.triggered == 1)[0]
 
+    def to_trials(self):
+        if self.n_catch == 0:
+            return [(*self._construct_trial(0), False)]
+
+        trials = []
+        for idx in range(self.n_catch):
+            trials.append((*self._construct_trial(idx), True))
+
+        return trials
+
+    def _construct_trial(self, trial_idx):
+        start_idx, n_frame = self._trial_index(trial_idx)
+        end_idx = start_idx + n_frame
+
+        trial_lenth = self.time[end_idx-1] - self.time[start_idx]
+        trial_chirp = self.chirped[start_idx:end_idx].sum()
+        trial_target = self.target[:, trial_idx]
+
+        return trial_lenth, trial_chirp, trial_target
+
     def _target(self, loc):
         loc = loc[1:-1].split(',')
         loc = np.array([float(l) for l in loc])
@@ -85,11 +105,8 @@ class SessionData:
                     orientation=TILE_ANGLE,
                     facecolor='w', edgecolor='g',lw=1))
 
-    def _frame_index(self, trial_idx):
-        # Average frame rate * 30 sec ~= 535 frames
-        PREFIX_FRAME = 500
-        APPEND_FRAME = 550
-
+    # note that average frame rate * 30 sec ISI ~= 535 frames
+    def _trial_index(self, trial_idx, prepend=ISI_FRAME, append=10):
         trigger_time = np.where(self.triggered == 1)[0]
         session_length = self.time.shape[0]
 
@@ -100,17 +117,21 @@ class SessionData:
         # with cricket catch
         if trial_idx == 0:
             start_idx = 0
-            n_frame = trigger_time[0] + APPEND_FRAME
+            n_frame = trigger_time[0] + append
 
         else:
-            start_idx = trigger_time[trial_idx - 1] + PREFIX_FRAME
-            n_frame = trigger_time[trial_idx] - start_idx + APPEND_FRAME
+            start_idx = trigger_time[trial_idx - 1] + prepend
+            n_frame = trigger_time[trial_idx] - start_idx + append
 
         # check if end of session
         if start_idx + n_frame > session_length:
             n_frame = session_length - start_idx
 
         return start_idx, n_frame
+
+    # append 550 frames to the end of the trial for visualization
+    def _frame_index(self, trial_idx):
+        return self._trial_index(trial_idx, append=550)
 
     def all_video(self):
         n_trigger = np.where(self.triggered == 1)[0].shape[0]
