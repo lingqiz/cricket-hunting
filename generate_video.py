@@ -4,11 +4,10 @@ from utils.data_loader import *
 from utils.data_struct import *
 
 # read in name and index from command line
-NAME = 'p16'
-SESS = [10, 11, 12, 13, 14]
+NAME = 'b12'
+SESS = [11, 12, 13, 14]
 
-# B_MICE or P_MICE
-all_files = P_MICE[NAME]
+all_files = ALL_MICE[NAME]
 
 all_data = []
 for idx, file in enumerate(all_files):

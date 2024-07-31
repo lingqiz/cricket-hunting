@@ -128,7 +128,7 @@ class SessionData:
         n_chip = self.chirped[self.start_idx:self.start_idx + self.n_frame].sum()
         print('number of chirps: %d' % n_chip)
         # create a continous color map
-        colors = plt.cm.viridis(np.linspace(0, 1, n_chip))
+        colors = plt.cm.viridis(np.linspace(0, 1, n_chip + 1))
 
         fig, axs = plt.subplots(1, 2, figsize=(20, 10))
 
