@@ -1,10 +1,11 @@
+from abc import ABC
 import cv2
 import numpy as np
 import tqdm
 import os
 
 from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI_FRAME, \
-                        TRK_CTR, TILE_CENTER, TILE_RAD_MM, TILE_ANGLE
+    TRK_CTR, TILE_CENTER, TILE_RAD_MM, TILE_ANGLE
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -13,7 +14,26 @@ from matplotlib import patches
 matplotlib.rcParams["image.origin"] = "lower"
 
 
-class SessionData:
+class ArenaMap(ABC):
+
+    def draw_arena(self, plot_ax, alpha=1):
+        for idx in range(len(TILE_CENTER[0])):
+            plot_ax.add_patch(patches.RegularPolygon(
+                (TILE_CENTER[0][idx],
+                 TILE_CENTER[1][idx]),
+                numVertices=6, radius=TILE_RAD_MM,
+                orientation=TILE_ANGLE,
+                facecolor='w', edgecolor='g',
+                lw=1, alpha=alpha))
+
+    def draw_target(self, plot_ax, alpha=0.5):
+        return [plot_ax.scatter(*target, s=125, alpha=alpha,
+                                facecolors='r',
+                                edgecolors='none')
+                for target in self.target.T]
+
+
+class SessionData(ArenaMap):
 
     def __init__(self, name, ses, df, video_path):
         # name and session
@@ -86,7 +106,7 @@ class SessionData:
         return arr.astype(int)
 
     def get_frame(self, index):
-    # get frame from video
+        # get frame from video
         self.video.set(cv2.CAP_PROP_POS_FRAMES, index)
         _, frame = self.video.read()
 
@@ -133,7 +153,8 @@ class SessionData:
         print('%s s%d, t%d' % (self.name, self.session, trial_idx))
         self.start_idx, self.n_frame = self._frame_index(trial_idx)
 
-        n_chip = self.chirped[self.start_idx:self.start_idx + self.n_frame].sum()
+        n_chip = self.chirped[self.start_idx:self.start_idx +
+                              self.n_frame].sum()
         print('number of chirps: %d' % n_chip)
         # create a continous color map
         colors = plt.cm.viridis(np.linspace(0, 1, n_chip + 1))
@@ -146,10 +167,7 @@ class SessionData:
 
         # trajectory and target
         ll, = axs[0].plot([], [], 'orange', alpha=0.5)
-        targets = [axs[0].scatter(*target, s=125, alpha=0.5,
-                                facecolors='r',
-                                edgecolors='none')
-                                for target in self.target.T]
+        targets = self.draw_target(axs[0])
 
         radius = 35
         circle = plt.Circle((0, 0), radius, color='tab:blue',
@@ -204,12 +222,12 @@ class SessionData:
             pbar.update(1)
 
         # shift indexing
-        animate_shifted = lambda i: animate(i + self.start_idx)
+        def animate_shifted(i): return animate(i + self.start_idx)
 
         # create video
         ani = animation.FuncAnimation(fig, animate_shifted,
-                                    frames=self.n_frame,
-                                    interval=10)
+                                      frames=self.n_frame,
+                                      interval=10)
 
         # video path
         target_fps = 10
@@ -224,22 +242,11 @@ class SessionData:
         ani.save(os.path.join(file_path, file_name), writer=writer)
         pbar.close()
 
-    @staticmethod
-    def draw_arena(plot_ax, alpha=1):
-            for idx in range(len(TILE_CENTER[0])):
-                plot_ax.add_patch(patches.RegularPolygon(
-                    (TILE_CENTER[0][idx],
-                     TILE_CENTER[1][idx]),
-                    numVertices=6, radius=TILE_RAD_MM,
-                    orientation=TILE_ANGLE,
-                    facecolor='w', edgecolor='g',
-                    lw=1, alpha=alpha))
 
-
-class TrialData:
+class TrialData(ArenaMap):
 
     def __init__(self, name, session, trial_idx, time, chirp,
-                 x, y, targets, chirp_loc, catch=True):
+                 x, y, target, chirp_loc, catch=True):
 
         # record trial information
         self.name = name
@@ -252,10 +259,10 @@ class TrialData:
         self.chirp = chirp
         self.n_chirp = np.sum(chirp)
 
-        self.targets = targets
+        self.target = target
         chirp_loc = np.sort(np.unique(chirp_loc))
         assert len(chirp_loc) >= 2 and len(chirp_loc) <= 3
-        self.target = targets[:, chirp_loc[-1]]
+        self.trial_target = target[:, chirp_loc[-1]]
 
         self.catch = catch
 
