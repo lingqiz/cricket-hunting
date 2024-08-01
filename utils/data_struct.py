@@ -70,7 +70,7 @@ class SessionData:
         start_idx, n_frame = self._trial_index(trial_idx)
         end_idx = start_idx + n_frame
 
-        return TrialData(self.name, self.session, self.time[start_idx:end_idx], self.chirped[start_idx:end_idx],
+        return TrialData(self.name, self.session, trial_idx, self.time[start_idx:end_idx], self.chirped[start_idx:end_idx],
                          self.x[start_idx:end_idx], self.y[start_idx:end_idx], self.target, self.chirp_loc[start_idx:end_idx])
 
     def _target(self, loc):
@@ -238,14 +238,15 @@ class SessionData:
 
 class TrialData:
 
-    def __init__(self, name, session, time, chirp,
+    def __init__(self, name, session, trial_idx, time, chirp,
                  x, y, targets, chirp_loc, catch=True):
 
         # record trial information
         self.name = name
         self.session = session
+        self.trial_idx = trial_idx
 
-        self.time = time
+        self.time = time - time[0]
         self.length = time[-1] - time[0]
 
         self.chirp = chirp
