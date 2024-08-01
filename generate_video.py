@@ -3,7 +3,6 @@ import numpy as np
 from utils.data_loader import *
 from utils.data_struct import *
 
-# read in name and index from command line
 NAME = 'b12'
 SESS = [11, 12, 13, 14]
 
