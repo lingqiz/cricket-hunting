@@ -19,8 +19,8 @@ def tile_angle():
     '''
     # two reference points
 
-    p1 = (3736,166646)
-    p2 = (300372,187681)
+    p1 = (3736, 166646)
+    p2 = (300372, 187681)
 
     # Difference in x coordinates
     dx = p2[0] - p1[0]
@@ -50,6 +50,7 @@ def arena_map():
             mm_centers.ax_new_guess.to_numpy())
 
 TILE_CENTER = arena_map()
+ARENA_CENTER = (1140, 1200)
 
 # Organize files for different mice cohorts
 video_base = '/groups/dennis/dennislab/data/rig'

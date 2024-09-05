@@ -5,7 +5,7 @@ import tqdm
 import os
 
 from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI_FRAME, \
-    TRK_CTR, TILE_CENTER, TILE_RAD_MM, TILE_ANGLE
+    TRK_CTR, TILE_CENTER, TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -31,6 +31,9 @@ class ArenaMap(ABC):
                                 facecolors='r',
                                 edgecolors='none')
                 for target in self.target.T]
+
+    def get_center(self):
+        return ARENA_CENTER
 
 
 class SessionData(ArenaMap):
