@@ -245,7 +245,6 @@ class SessionData(ArenaMap):
         ani.save(os.path.join(file_path, file_name), writer=writer)
         pbar.close()
 
-
 class TrialData(ArenaMap):
 
     def __init__(self, name, session, trial_idx, time, chirp,
@@ -273,6 +272,55 @@ class TrialData(ArenaMap):
         self.x = x
         self.y = y
 
-        # chirp coordinates
+        # chirp coordinates and time
         self.chirp_x = x[chirp == 1]
         self.chirp_y = y[chirp == 1]
+        self.chirp_time = self.time[chirp == 1]
+
+    # data reduction into stop locations
+    def stop_location(self, rotate=False, center=False):
+        return StopLocation(np.array([self.chirp_x, self.chirp_y]),
+                            np.array([self.x[0], self.y[0]]),
+                            np.array([self.x[-1], self.y[-1]]),
+                            self.time[self.chirp == 1],
+                            rotate=rotate, center=center)
+
+
+# class for different data reductions of the trial
+class StopLocation(ArenaMap):
+    def __init__(self, loc, start, end, t, rotate=False, center=False):
+        self.loc = loc
+        self.start = start.reshape(-1, 1)
+        self.end = end.reshape(-1, 1)
+        self.t = t
+
+        if rotate:
+            self._rotate()
+
+        if center:
+            self._center()
+
+    def _rotate(self):
+        center = np.array(self.get_center()).reshape(-1, 1)
+        self.start = self.start - center
+        self.loc = self.loc - center
+        self.end = self.end - center
+
+        self.rot_angle = - np.arctan2(self.end[1], self.end[0]).squeeze() + np.pi
+        rotate_matrix = np.array([[np.cos(self.rot_angle), -np.sin(self.rot_angle)],
+                                  [np.sin(self.rot_angle), np.cos(self.rot_angle)]])
+
+        self.loc = rotate_matrix @ self.loc
+        self.start = rotate_matrix @ self.start
+        self.end = rotate_matrix @ self.end
+
+    def _center(self):
+        self.start -= self.end
+        self.loc -= self.end
+        self.end -= self.end
+
+    def distance(self):
+        return np.linalg.norm(self.loc, axis=0)
+
+    def angle(self):
+        return np.rad2deg(np.arctan2(self.loc[1], self.loc[0]))
