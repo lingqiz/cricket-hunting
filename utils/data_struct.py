@@ -93,7 +93,7 @@ class SessionData(ArenaMap):
         start_idx, n_frame = self._trial_index(trial_idx)
         end_idx = start_idx + n_frame
 
-        return TrialData(self.name, self.session, trial_idx, self.time[start_idx:end_idx], self.chirped[start_idx:end_idx],
+        return TrialData(self, self.name, self.session, trial_idx, self.time[start_idx:end_idx], self.chirped[start_idx:end_idx],
                          self.x[start_idx:end_idx], self.y[start_idx:end_idx], self.target, self.chirp_loc[start_idx:end_idx])
 
     def _target(self, loc):
@@ -247,10 +247,11 @@ class SessionData(ArenaMap):
 
 class TrialData(ArenaMap):
 
-    def __init__(self, name, session, trial_idx, time, chirp,
-                 x, y, target, chirp_loc, catch=True):
+    def __init__(self, ses_ref, name, session, trial_idx, time,
+                 chirp, x, y, target, chirp_loc, catch=True):
 
         # record trial information
+        self.ses_ref = ses_ref
         self.name = name
         self.session = session
         self.trial_idx = trial_idx
