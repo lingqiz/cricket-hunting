@@ -325,6 +325,10 @@ class StopLocation(ArenaMap):
         self.loc -= self.end
         self.end -= self.end
 
+    def _filter_stop(self, threshold=5):
+        index = np.where(self.delta_distance() < threshold)[0] + 1
+        self.loc = np.delete(self.loc, index, axis=1)
+
     def distance(self):
         return np.linalg.norm(self.loc, axis=0)
 
@@ -339,7 +343,3 @@ class StopLocation(ArenaMap):
 
     def delta_angle(self):
         return np.rad2deg(np.arctan2(self.delta()[1], self.delta()[0]))
-
-    def _filter_stop(self, threshold=5):
-        index = np.where(self.delta_distance() < threshold)[0] + 1
-        self.loc = np.delete(self.loc, index, axis=1)
