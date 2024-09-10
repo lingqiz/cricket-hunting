@@ -278,17 +278,20 @@ class TrialData(ArenaMap):
         self.chirp_time = self.time[chirp == 1]
 
     # data reduction into stop locations
-    def stop_location(self, rotate=False, center=False):
+    def stop_location(self, rotate=False, center=False, filter_stop=False):
         return StopLocation(np.array([self.chirp_x, self.chirp_y]),
                             np.array([self.x[0], self.y[0]]),
                             np.array([self.x[-1], self.y[-1]]),
                             self.time[self.chirp == 1],
-                            rotate=rotate, center=center)
+                            rotate=rotate, center=center,
+                            filter_stop=filter_stop)
 
 
 # class for different data reductions of the trial
 class StopLocation(ArenaMap):
-    def __init__(self, loc, start, end, t, rotate=False, center=False):
+    def __init__(self, loc, start, end, t,
+                 rotate=False, center=False,
+                 filter_stop=False):
         self.loc = loc
         self.start = start.reshape(-1, 1)
         self.end = end.reshape(-1, 1)
@@ -299,6 +302,9 @@ class StopLocation(ArenaMap):
 
         if center:
             self._center()
+
+        if filter_stop:
+            self._filter_stop()
 
     def _rotate(self):
         center = np.array(self.get_center()).reshape(-1, 1)
@@ -324,3 +330,16 @@ class StopLocation(ArenaMap):
 
     def angle(self):
         return np.rad2deg(np.arctan2(self.loc[1], self.loc[0]))
+
+    def delta(self):
+        return self.loc[:, 1:] - self.loc[:, :-1]
+
+    def delta_distance(self):
+        return np.linalg.norm(self.delta(), axis=0)
+
+    def delta_angle(self):
+        return np.rad2deg(np.arctan2(self.delta()[1], self.delta()[0]))
+
+    def _filter_stop(self, threshold=5):
+        index = np.where(self.delta_distance() < threshold)[0] + 1
+        self.loc = np.delete(self.loc, index, axis=1)
