@@ -3,6 +3,9 @@ import pandas as pd
 import math, os
 from datetime import datetime
 
+import pathlib
+DIR_ROOT = pathlib.Path(__file__).parent.parent.resolve()
+
 # unit conversions
 ZEBER_TO_DLC = 1896 / 72248
 ZABER_TO_MM = 508 / 72248
@@ -40,7 +43,7 @@ TILE_RAD_MM = TILE_RAD_ZABER * ZABER_TO_MM
 
 # Arena Map based on 20240104
 def arena_map():
-    filename = "./data/zaber_centers_20240104.csv"
+    filename = os.path.join(DIR_ROOT, 'data/zaber_centers_20240104.csv')
     tile_centers = pd.read_csv(filename)
     mm_centers = tile_centers.copy()
     mm_centers.ls_guess = np.multiply(mm_centers.ls_guess, ZABER_TO_MM)
@@ -68,6 +71,7 @@ def time_diff(time1, time2):
     return abs(seconds1 - seconds2)
 
 def load_data(dict, base_dir):
+    base_dir = os.path.join(DIR_ROOT, base_dir)
     fl_list = os.listdir(base_dir)
     fl_list.sort()
     for fl in fl_list:
@@ -92,12 +96,17 @@ def load_data(dict, base_dir):
 
 # b12b13 (2023 Fall)
 B_MICE = {'b12': [], 'b13': []}
-base_dir = './data/b12b13'
+base_dir = 'data/b12b13'
 load_data(B_MICE, base_dir)
 
 # p16p17p18 (2024 Spring)
 P_MICE = {'p16': [], 'p17': [], 'p18': []}
-base_dir = './data/p16p17p18'
+base_dir = 'data/p16p17p18'
 load_data(P_MICE, base_dir)
 
-ALL_MICE = {**B_MICE, **P_MICE}
+# p16p17p18 (2024 Fall)
+P_MALE = {'p20': [], 'p21': []}
+base_dir = 'data/p20p21'
+load_data(P_MALE, base_dir)
+
+ALL_MICE = {**B_MICE, **P_MICE, **P_MALE}
