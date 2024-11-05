@@ -326,7 +326,8 @@ class StopLocation(ArenaMap):
         self.loc -= self.end
         self.end -= self.end
 
-    def _filter_stop(self, threshold=5):
+    # filter out stops that are less than 10 mm from the last one
+    def _filter_stop(self, threshold=10):
         index = np.where(self.delta_distance() < threshold)[0] + 1
         self.loc = np.delete(self.loc, index, axis=1)
 
