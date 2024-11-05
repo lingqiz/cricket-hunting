@@ -5,7 +5,7 @@ import pandas as pd
 MICE_HUNTING = {}
 MICE_NOSOUND = {}
 
-for name in ['p16', 'p17', 'p18', 'b12', 'b13']:
+for name in ['p16', 'p17', 'p18', 'b12', 'b13', 'p20', 'p21']:
     all_data = []
     for idx, file in enumerate(ALL_MICE[name]):
         data_frame = pd.read_csv(file[0], low_memory=False)
@@ -13,7 +13,7 @@ for name in ['p16', 'p17', 'p18', 'b12', 'b13']:
         all_data.append(data)
 
     # PWK mice
-    if name.startswith('p'):
+    if name.startswith('p1'):
         idx_select = 15
         idx_nosound = -4
 
@@ -31,6 +31,12 @@ for name in ['p16', 'p17', 'p18', 'b12', 'b13']:
 
         print(f'{name}: {len(select_data)} hunting sessions, ' +
             f'{len(no_sound)} no sound sessions')
+
+    # PWK male
+    if name.startswith('p2'):
+        select_data = all_data[-12:-8] + all_data[-5:]
+        MICE_NOSOUND[name] = select_data
+        print(f'{name}: {len(select_data)} no sound sessions')
 
     # B6 mice
     elif name.startswith('b'):
