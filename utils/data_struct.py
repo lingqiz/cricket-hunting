@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import tqdm
 import os
+from scipy.signal import butter, filtfilt
 
 from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI_FRAME, \
     TRK_CTR, TILE_CENTER, TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER
@@ -152,6 +153,7 @@ class SessionData(ArenaMap):
             for idx in range(n_trigger):
                 self.trial_video(idx)
 
+# TODO: Refactor the code to generate video from trial data
     def trial_video(self, trial_idx):
         print('%s s%d, t%d' % (self.name, self.session, trial_idx))
         self.start_idx, self.n_frame = self._frame_index(trial_idx)
@@ -273,10 +275,24 @@ class TrialData(ArenaMap):
         self.x = x
         self.y = y
 
+        self._smooth_trajectory()
+
         # chirp coordinates and time
         self.chirp_x = x[chirp == 1]
         self.chirp_y = y[chirp == 1]
         self.chirp_time = self.time[chirp == 1]
+
+    def _smooth_trajectory(self):
+        # sampling rate = 17.8 Hz
+        # cutoff frequency = 3.5 Hz
+        fs = 17.8
+        nyquist = 0.5 * fs
+        cutoff = 3.5
+        b, a = butter(N=2, Wn=cutoff/nyquist,
+                      btype='low', analog=False)
+
+        self.x = filtfilt(b, a, self.x)
+        self.y = filtfilt(b, a, self.y)
 
     # data reduction into stop locations
     def stop_location(self, rotate=False, center=False, filter_stop=False):
@@ -286,7 +302,6 @@ class TrialData(ArenaMap):
                             self.time[self.chirp == 1],
                             rotate=rotate, center=center,
                             filter_stop=filter_stop)
-
 
 # class for different data reductions of the trial
 class StopLocation(ArenaMap):
