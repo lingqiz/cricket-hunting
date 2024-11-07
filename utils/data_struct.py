@@ -300,18 +300,19 @@ class TrialData(ArenaMap):
                             np.array([self.x[0], self.y[0]]),
                             np.array([self.x[-1], self.y[-1]]),
                             self.time[self.chirp == 1],
-                            rotate=rotate, center=center,
-                            filter_stop=filter_stop)
+                            self.target, rotate=rotate,
+                            center=center, filter_stop=filter_stop)
 
 # class for different data reductions of the trial
 class StopLocation(ArenaMap):
-    def __init__(self, loc, start, end, t,
+    def __init__(self, loc, start, end, t, target,
                  rotate=False, center=False,
                  filter_stop=False):
         self.loc = loc
         self.start = start.reshape(-1, 1)
         self.end = end.reshape(-1, 1)
         self.t = t
+        self.target = target
 
         if rotate:
             self._rotate()
@@ -335,10 +336,12 @@ class StopLocation(ArenaMap):
         self.loc = rotate_matrix @ self.loc
         self.start = rotate_matrix @ self.start
         self.end = rotate_matrix @ self.end
+        self.target = rotate_matrix @ self.target
 
     def _center(self):
         self.start -= self.end
         self.loc -= self.end
+        self.target -= self.end
         self.end -= self.end
 
     # filter out stops that are less than 10 mm from the last one
