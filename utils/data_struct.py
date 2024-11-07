@@ -5,8 +5,8 @@ import tqdm
 import os
 from scipy.signal import butter, filtfilt
 
-from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI_FRAME, \
-    TRK_CTR, TILE_CENTER, TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER
+from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI_FRAME, TRK_CTR, \
+    TILE_CENTER, TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, TILE_RADIUS
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -294,6 +294,13 @@ class TrialData(ArenaMap):
         self.x = filtfilt(b, a, self.x)
         self.y = filtfilt(b, a, self.y)
 
+    def run_distance(self):
+        MM_TO_M = 1e-3
+        dx = np.diff(self.x)
+        dy = np.diff(self.y)
+
+        return np.sum(np.sqrt(dx**2 + dy**2)) * MM_TO_M
+
     # data reduction into stop locations
     def stop_location(self, rotate=False, center=False, filter_stop=False):
         return StopLocation(np.array([self.chirp_x, self.chirp_y]),
@@ -349,6 +356,23 @@ class StopLocation(ArenaMap):
         index = np.where(self.delta_distance() < threshold)[0] + 1
         self.loc = np.delete(self.loc, index, axis=1)
 
+    def tile_visit_unique(self):
+        '''
+        Unique tile visit count for the trial,
+        excluding the start tile, and including the end tile
+        '''
+        locations = np.concatenate([self.loc, self.end], axis=1)
+
+        counter = 0
+        for idx in range(self.target.shape[1]):
+            dist = np.linalg.norm(locations - self.target[:, idx].reshape(-1, 1), axis=0)
+            tile_visit = (dist <= TILE_RADIUS).astype(int)
+            counter += (np.sum(tile_visit) > 0).astype(int)
+
+        start_ind = np.any(np.linalg.norm(self.target - self.start, axis=0) <= TILE_RADIUS)
+        return counter - start_ind.astype(int)
+
+    # useful quantities to calculate
     def distance(self):
         return np.linalg.norm(self.loc, axis=0)
 
