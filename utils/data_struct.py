@@ -82,11 +82,16 @@ class SessionData(ArenaMap):
         self.n_catch = np.sum(self.triggered)
         self.trigger_time = np.where(self.triggered == 1)[0]
 
-    def to_trials(self):
+    def to_trials(self, non_catch=False):
         if self.n_catch == 0:
             trial = self._construct_trial(0)
             trial.catch = False
-            return [trial]
+
+            # include non-catch trials
+            if non_catch:
+                return [trial]
+            else:
+                return []
 
         return [self._construct_trial(idx) for idx in range(self.n_catch)]
 
