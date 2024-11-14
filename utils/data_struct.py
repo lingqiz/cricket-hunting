@@ -54,6 +54,7 @@ class SessionData(ArenaMap):
         # tracking coordinates
         self.x = self.zaber_x - self.dlc_x
         self.y = self.zaber_y + self.dlc_y
+        self._smooth_trajectory()
 
         # cricket tiles
         self.zaber_target = self._target(df['locations'][0])
@@ -81,6 +82,18 @@ class SessionData(ArenaMap):
         # cricket catch
         self.n_catch = np.sum(self.triggered)
         self.trigger_time = np.where(self.triggered == 1)[0]
+
+    def _smooth_trajectory(self):
+        # sampling rate = 17.8 Hz
+        # cutoff frequency = 3.5 Hz
+        fs = 17.8
+        nyquist = 0.5 * fs
+        cutoff = 3.5
+        b, a = butter(N=2, Wn=cutoff/nyquist,
+                      btype='low', analog=False)
+
+        self.x = filtfilt(b, a, self.x)
+        self.y = filtfilt(b, a, self.y)
 
     def to_trials(self, non_catch=False):
         if self.n_catch == 0:
@@ -283,24 +296,10 @@ class TrialData(ArenaMap):
         self.x = x
         self.y = y
 
-        self._smooth_trajectory()
-
         # chirp coordinates and time
         self.chirp_x = x[chirp == 1]
         self.chirp_y = y[chirp == 1]
         self.chirp_time = self.time[chirp == 1]
-
-    def _smooth_trajectory(self):
-        # sampling rate = 17.8 Hz
-        # cutoff frequency = 3.5 Hz
-        fs = 17.8
-        nyquist = 0.5 * fs
-        cutoff = 3.5
-        b, a = butter(N=2, Wn=cutoff/nyquist,
-                      btype='low', analog=False)
-
-        self.x = filtfilt(b, a, self.x)
-        self.y = filtfilt(b, a, self.y)
 
     def run_distance(self):
         MM_TO_M = 1e-3
