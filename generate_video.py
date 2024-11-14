@@ -6,7 +6,9 @@ from utils.data_struct import *
 
 # NAME = 'p20'
 # SESS = [49, 50, 51, 52]
-# read in name and session number from command line
+
+# read in name and session number
+# from command line
 name = sys.argv[1]
 sess = [int(s) for s in sys.argv[2:]]
 
