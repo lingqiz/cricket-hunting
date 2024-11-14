@@ -271,10 +271,13 @@ class TrialData(ArenaMap):
 
         self.target = target
         chirp_loc = np.sort(np.unique(chirp_loc))
-        assert len(chirp_loc) >= 2 and len(chirp_loc) <= 3
         self.trial_target = target[:, chirp_loc[-1]]
 
         self.catch = catch
+
+        # number of chirp locations must be 2 or 3
+        # (last, current, and next)
+        assert len(chirp_loc) >= 2 and len(chirp_loc) <= 3
 
         # x, y data
         self.x = x
