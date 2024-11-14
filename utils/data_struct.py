@@ -173,33 +173,44 @@ class SessionData(ArenaMap):
 
 # TODO: Refactor the code to generate video from trial data
     def trial_video(self, trial_idx):
+        trial_obj = self._construct_trial(trial_idx)
+
         print('%s s%d, t%d' % (self.name, self.session, trial_idx))
         self.start_idx, self.n_frame = self._frame_index(trial_idx)
-
-        n_chip = self.chirped[self.start_idx:self.start_idx +
-                              self.n_frame].sum()
+        n_chip = self.chirped[self.start_idx:self.start_idx + self.n_frame].sum()
         print('number of chirps: %d' % n_chip)
+
         # create a continous color map
         colors = plt.cm.viridis(np.linspace(0, 1, n_chip + 1))
-
+        # create figure
         fig, axs = plt.subplots(1, 2, figsize=(20, 10))
 
-        # left plot
-        # draw tiles
-        self.draw_arena(axs[0])
+        # LEFT PLOT
+        # TODO: correct tiles coordinates using CCF
+        # self.draw_arena(axs[0])
 
         # trajectory and target
-        ll, = axs[0].plot([], [], 'orange', alpha=0.5)
+        ll, = axs[0].plot([], [], 'orange', alpha=0.25)
         targets = self.draw_target(axs[0])
+
+        # put a cross on the current trial target
+        trial_target = trial_obj.trial_target
+        axs[0].scatter(*trial_target, s=125, alpha=0.5,
+                       marker='x', linewidths=3)
 
         radius = 35
         circle = plt.Circle((0, 0), radius, color='tab:blue',
                             linewidth=2, fill=False)
         axs[0].add_patch(circle)
 
-        # right plot
+        # RIGHT PLOT
         im = axs[1].imshow(self.get_frame(0), cmap='gray')
         axs[1].invert_xaxis()
+
+        # add an indicator for chirp
+        ind_right = axs[1].scatter(50, 50, s=625, marker='s',
+                        color='tab:blue', label='Chirp')
+        ind_right.set_visible(False)
 
         # axis format
         axs[0].set_xlim(0, 2400)
@@ -213,6 +224,7 @@ class SessionData(ArenaMap):
         self._chirp_count = 0
         self._chirp_active = False
         self._chirp_point = None
+        self._ind_right = ind_right
         self._step_count = 0
         pbar = tqdm.tqdm(total=self.n_frame + 1, position=0, leave=True)
 
@@ -225,6 +237,7 @@ class SessionData(ArenaMap):
                 if self._step_count == 10:
                     self._chirp_active = False
                     self._chirp_point.set_facecolor('r')
+                    self._ind_right.set_visible(False)
                     self._step_count = 0
 
             # inactive -> active
@@ -234,6 +247,7 @@ class SessionData(ArenaMap):
 
                 self._chirp_point = targets[self.chirp_loc[i]]
                 self._chirp_point.set_facecolor('b')
+                self._ind_right.set_visible(True)
 
                 axs[0].scatter(self.x[i], self.y[i], marker='s',
                                color=colors[self._chirp_count - 1])
