@@ -28,7 +28,7 @@ class ArenaMap(ABC):
                 lw=1, alpha=alpha))
 
     def draw_target(self, plot_ax, alpha=0.5):
-        return [plot_ax.scatter(*target, s=125, alpha=alpha,
+        return [plot_ax.scatter(*target, s=256, alpha=alpha,
                                 facecolors='r',
                                 edgecolors='none')
                 for target in self.target.T]
