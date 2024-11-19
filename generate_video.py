@@ -30,4 +30,4 @@ for ses_idx in sess:
 
     # generate video for the session
     print('gennrating video for session', ses_idx)
-    data.all_video()
+    data.all_video(max_frame=64800)
