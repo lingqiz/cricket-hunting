@@ -182,12 +182,54 @@ class SessionData(ArenaMap):
 
 class DataPlot:
 
-    def _init_vars(self, ind_right):
+    def __init__(self):
+        self.target_fps = 10
+
+    def _init_vars(self):
         self.chirp_count = 0
         self.chirp_active = False
         self.chirp_point = None
-        self.ind_right = ind_right
         self.step_count = 0
+
+    def _init_plot(self, ses_obj, trial_obj):
+        # create figure
+        self.fig, self.axs = plt.subplots(1, 2, figsize=(20, 10))
+
+        # LEFT PLOT
+        # TODO: correct tiles coordinates using CCF
+        # ses_obj.draw_arena(axs[0])
+        self.targets = ses_obj.draw_target(self.axs[0], draw_hex=True)
+
+        # trajectory and target
+        self.ll, = self.axs[0].plot([], [], 'orange', alpha=0.25)
+
+        # put a cross on the current trial target
+        trial_target = trial_obj.trial_target
+        self.axs[0].scatter(*trial_target, s=125, alpha=0.5,
+                       marker='x', linewidths=3)
+
+        # mouse location
+        radius = 35
+        self.circle = plt.Circle((0, 0), radius, color='tab:blue',
+                                 linewidth=2, fill=False)
+        self.axs[0].add_patch(self.circle)
+
+        # RIGHT PLOT
+        self.im = self.axs[1].imshow(ses_obj.get_frame(0), cmap='gray')
+        self.axs[1].invert_xaxis()
+
+        # add an indicator for chirp
+        self.ind_right = self.axs[1].scatter(50, 50, s=625, marker='s',
+                                             color='tab:blue', label='Chirp')
+        self.ind_right.set_visible(False)
+
+        # axis format
+        self.axs[0].set_xlim(0, 2400)
+        self.axs[0].set_ylim(0, 2400)
+        self.axs[0].set_aspect('equal')
+
+        self.axs[1].axis('off')
+        self.axs[1].set_aspect('equal')
 
     def select_color(self, index):
         if index >= len(self.colors):
@@ -195,10 +237,41 @@ class DataPlot:
 
         return self.colors[index]
 
+    def animate(self, ses_obj, i):
+        self.axs[0].set_title('Frame %d, Time %.3f Sec' % (i, ses_obj.time[i]))
+
+        # active -> inactive
+        if self.chirp_active:
+            self.step_count += 1
+            if self.step_count == 10:
+                self.chirp_active = False
+                self.chirp_point.set_facecolor('r')
+                self.ind_right.set_visible(False)
+                self.step_count = 0
+
+        # inactive -> active
+        if ses_obj.chirped[i] == 1:
+            self.chirp_count += 1
+            self.chirp_active = True
+
+            self.chirp_point = self.targets[ses_obj.chirp_loc[i]]
+            self.chirp_point.set_facecolor('b')
+            self.ind_right.set_visible(True)
+
+            self.axs[0].scatter(ses_obj.x[i], ses_obj.y[i], marker='s',
+                                color=self.select_color(self.chirp_count - 1))
+
+        self.ll.set_data(ses_obj.x[self.start_idx:i], ses_obj.y[self.start_idx:i])
+        self.circle.center = (ses_obj.x[i], ses_obj.y[i])
+        self.im.set_data(ses_obj.get_frame(i))
+
+        self.pbar.update(1)
+
     def trial_video(self, ses_obj, trial_idx):
         '''
         Generate a video for visualizing the trial
         '''
+        # init data variables
         trial_obj = ses_obj._construct_trial(trial_idx)
         print('%s s%d, t%d' % (ses_obj.name, ses_obj.session, trial_idx))
 
@@ -208,91 +281,26 @@ class DataPlot:
         n_chip = ses_obj.chirped[self.start_idx:self.start_idx + self.n_frame_hunting].sum()
         print('number of active chirps: %d' % n_chip)
 
-        # START PLOTTING
         # create a continous color map
         self.colors = plt.cm.viridis(np.linspace(0, 1, n_chip + 1))
-        # create figure
-        fig, axs = plt.subplots(1, 2, figsize=(20, 10))
 
-        # LEFT PLOT
-        # TODO: correct tiles coordinates using CCF
-        # ses_obj.draw_arena(axs[0])
-        targets = ses_obj.draw_target(axs[0], draw_hex=True)
-
-        # trajectory and target
-        ll, = axs[0].plot([], [], 'orange', alpha=0.25)
-
-        # put a cross on the current trial target
-        trial_target = trial_obj.trial_target
-        axs[0].scatter(*trial_target, s=125, alpha=0.5,
-                       marker='x', linewidths=3)
-
-        # mouse location
-        radius = 35
-        circle = plt.Circle((0, 0), radius, color='tab:blue',
-                            linewidth=2, fill=False)
-        axs[0].add_patch(circle)
-
-        # RIGHT PLOT
-        im = axs[1].imshow(ses_obj.get_frame(0), cmap='gray')
-        axs[1].invert_xaxis()
-
-        # add an indicator for chirp
-        ind_right = axs[1].scatter(50, 50, s=625, marker='s',
-                        color='tab:blue', label='Chirp')
-        ind_right.set_visible(False)
-
-        # axis format
-        axs[0].set_xlim(0, 2400)
-        axs[0].set_ylim(0, 2400)
-        axs[0].set_aspect('equal')
-
-        axs[1].axis('off')
-        axs[1].set_aspect('equal')
-
-        self._init_vars(ind_right)
-        pbar = tqdm.tqdm(total=self.n_frame + 1, position=0, leave=True)
-
-        def animate(i):
-            axs[0].set_title('Frame %d, Time %.3f Sec' % (i, ses_obj.time[i]))
-
-            # active -> inactive
-            if self.chirp_active:
-                self.step_count += 1
-                if self.step_count == 10:
-                    self.chirp_active = False
-                    self.chirp_point.set_facecolor('r')
-                    self.ind_right.set_visible(False)
-                    self.step_count = 0
-
-            # inactive -> active
-            if ses_obj.chirped[i] == 1:
-                self.chirp_count += 1
-                self.chirp_active = True
-
-                self.chirp_point = targets[ses_obj.chirp_loc[i]]
-                self.chirp_point.set_facecolor('b')
-                self.ind_right.set_visible(True)
-
-                axs[0].scatter(ses_obj.x[i], ses_obj.y[i], marker='s',
-                               color=self.select_color(self.chirp_count - 1))
-
-            ll.set_data(ses_obj.x[self.start_idx:i], ses_obj.y[self.start_idx:i])
-            circle.center = (ses_obj.x[i], ses_obj.y[i])
-            im.set_data(ses_obj.get_frame(i))
-
-            pbar.update(1)
-
-        # shift indexing
-        def animate_shifted(i): return animate(i + self.start_idx)
+        # init plotting
+        self._init_plot(ses_obj, trial_obj)
+        self._init_vars()
+        self.pbar = tqdm.tqdm(total=self.n_frame + 1, position=0, leave=True)
 
         # create video
-        ani = animation.FuncAnimation(fig, animate_shifted,
+        self.save_video(ses_obj, trial_idx)
+
+    def save_video(self, ses_obj, trial_idx):
+        # create video
+        # index shifted animation function
+        def animate_shifted(i): return self.animate(ses_obj, i + self.start_idx)
+        ani = animation.FuncAnimation(self.fig, animate_shifted,
                                       frames=self.n_frame,
                                       interval=10)
 
         # video path
-        target_fps = 10
         file_path = os.path.join('./data/video', ses_obj.name)
         file_name = 's%d_t%d' % (ses_obj.session, trial_idx) + '.mp4'
 
@@ -300,9 +308,9 @@ class DataPlot:
             os.makedirs(file_path)
 
         # save video
-        writer = animation.writers['ffmpeg'](fps=target_fps, bitrate=4096)
+        writer = animation.writers['ffmpeg'](fps=self.target_fps, bitrate=4096)
         ani.save(os.path.join(file_path, file_name), writer=writer)
-        pbar.close()
+        self.pbar.close()
 
 
 class TrialData(ArenaMap):
