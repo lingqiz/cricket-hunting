@@ -190,6 +190,16 @@ class DataPlot:
         self.chirp_active = False
         self.chirp_point = None
         self.step_count = 0
+        self.captured = False
+        self.tile_visited = np.zeros(len(self.targets)).astype(bool)
+
+    def _check_tile_visit(self, stop_point):
+        dist = np.linalg.norm(self.target_xy - stop_point.reshape([2, 1]), axis=0)
+        tile_visit = (dist <= TILE_RADIUS)
+        if np.sum(tile_visit) > 0:
+            tile_index = np.where(tile_visit)[0][0]
+            self.tile_visited[tile_index] = True
+            self.targets[tile_index].set_facecolor('g')
 
     def _init_plot(self, ses_obj, trial_obj):
         # create figure
@@ -198,6 +208,7 @@ class DataPlot:
         # LEFT PLOT
         # TODO: correct tiles coordinates using CCF
         # ses_obj.draw_arena(axs[0])
+        self.target_xy = ses_obj.target
         self.targets = ses_obj.draw_target(self.axs[0], draw_hex=True)
 
         # trajectory and target
@@ -213,6 +224,9 @@ class DataPlot:
         self.circle = plt.Circle((0, 0), radius, color='tab:blue',
                                  linewidth=2, fill=False)
         self.axs[0].add_patch(self.circle)
+
+        # write information
+        self.text = self.axs[0].text(20, 20, 'Chirps: 0, Tile Visit: 0', fontsize=12)
 
         # RIGHT PLOT
         self.im = self.axs[1].imshow(ses_obj.get_frame(0), cmap='gray')
@@ -239,32 +253,46 @@ class DataPlot:
 
     def animate(self, ses_obj, i):
         self.axs[0].set_title('Frame %d, Time %.3f Sec' % (i, ses_obj.time[i]))
+        self.text.set_text('# Chirps: %d, # of Tile Visit: %d' %
+                           (self.chirp_count, np.sum(self.tile_visited)))
 
-        # active -> inactive
-        if self.chirp_active:
-            self.step_count += 1
-            if self.step_count == 10:
-                self.chirp_active = False
-                self.chirp_point.set_facecolor('r')
-                self.ind_right.set_visible(False)
-                self.step_count = 0
+        if not self.captured:
+            # active -> inactive
+            if self.chirp_active:
+                self.step_count += 1
+                if self.step_count == 10:
+                    self.chirp_active = False
+                    self.chirp_point.set_facecolor('r')
+                    self.ind_right.set_visible(False)
+                    self.step_count = 0
 
-        # inactive -> active
-        if ses_obj.chirped[i] == 1:
-            self.chirp_count += 1
-            self.chirp_active = True
+            # inactive -> active
+            if ses_obj.chirped[i] == 1:
+                self.chirp_count += 1
+                self.chirp_active = True
 
-            self.chirp_point = self.targets[ses_obj.chirp_loc[i]]
-            self.chirp_point.set_facecolor('b')
-            self.ind_right.set_visible(True)
+                self.chirp_point = self.targets[ses_obj.chirp_loc[i]]
+                self.chirp_point.set_facecolor('b')
+                self.ind_right.set_visible(True)
 
-            self.axs[0].scatter(ses_obj.x[i], ses_obj.y[i], marker='s',
-                                color=self.select_color(self.chirp_count - 1))
+                self._check_tile_visit(np.array([ses_obj.x[i], ses_obj.y[i]]))
 
+                self.axs[0].scatter(ses_obj.x[i], ses_obj.y[i], marker='s',
+                                    color=self.select_color(self.chirp_count - 1))
+
+            if ses_obj.triggered[i] == 1:
+                self.captured = True
+                self.ind_right.set_facecolor('g')
+                self.ind_right.set_visible(True)
+
+        # plot trajectory data
         self.ll.set_data(ses_obj.x[self.start_idx:i], ses_obj.y[self.start_idx:i])
         self.circle.center = (ses_obj.x[i], ses_obj.y[i])
+
+        # display video frame
         self.im.set_data(ses_obj.get_frame(i))
 
+        # update progress bar
         self.pbar.update(1)
 
     def trial_video(self, ses_obj, trial_idx):
