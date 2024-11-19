@@ -170,14 +170,19 @@ class SessionData(ArenaMap):
     def _frame_index(self, trial_idx):
         return self._trial_index(trial_idx, append=550)
 
-    def all_video(self):
+    def all_video(self, max_frame=16500):
         n_trigger = np.where(self.triggered == 1)[0].shape[0]
 
         if n_trigger == 0:
+            print('No cricket capture')
             DataPlot().trial_video(self, 0)
         else:
             for idx in range(n_trigger):
-                DataPlot().trial_video(self, idx)
+                _, n_frame = self._frame_index(idx)
+                if n_frame > max_frame:
+                    print('Skip Session %d, Trial %d: %d frames' % (self.session, idx, n_frame))
+                else:
+                    DataPlot().trial_video(self, idx)
 
 
 class DataPlot:
