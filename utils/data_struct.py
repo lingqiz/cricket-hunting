@@ -174,45 +174,67 @@ class SessionData(ArenaMap):
         n_trigger = np.where(self.triggered == 1)[0].shape[0]
 
         if n_trigger == 0:
-            self.trial_video(0)
+            DataPlot().trial_video(self, 0)
         else:
             for idx in range(n_trigger):
-                self.trial_video(idx)
+                DataPlot().trial_video(self, idx)
 
-# TODO: Refactor the code to generate video from trial data
-    def trial_video(self, trial_idx):
-        trial_obj = self._construct_trial(trial_idx)
 
-        print('%s s%d, t%d' % (self.name, self.session, trial_idx))
-        self.start_idx, self.n_frame = self._frame_index(trial_idx)
-        n_chip = self.chirped[self.start_idx:self.start_idx + self.n_frame].sum()
-        print('number of chirps: %d' % n_chip)
+class DataPlot:
 
+    def _init_vars(self, ind_right):
+        self.chirp_count = 0
+        self.chirp_active = False
+        self.chirp_point = None
+        self.ind_right = ind_right
+        self.step_count = 0
+
+    def select_color(self, index):
+        if index >= len(self.colors):
+            return self.colors[-1]
+
+        return self.colors[index]
+
+    def trial_video(self, ses_obj, trial_idx):
+        '''
+        Generate a video for visualizing the trial
+        '''
+        trial_obj = ses_obj._construct_trial(trial_idx)
+        print('%s s%d, t%d' % (ses_obj.name, ses_obj.session, trial_idx))
+
+        self.start_idx, self.n_frame = ses_obj._frame_index(trial_idx)
+        _, self.n_frame_hunting = ses_obj._trial_index(trial_idx, )
+
+        n_chip = ses_obj.chirped[self.start_idx:self.start_idx + self.n_frame_hunting].sum()
+        print('number of active chirps: %d' % n_chip)
+
+        # START PLOTTING
         # create a continous color map
-        colors = plt.cm.viridis(np.linspace(0, 1, n_chip + 1))
+        self.colors = plt.cm.viridis(np.linspace(0, 1, n_chip + 1))
         # create figure
         fig, axs = plt.subplots(1, 2, figsize=(20, 10))
 
         # LEFT PLOT
         # TODO: correct tiles coordinates using CCF
-        # self.draw_arena(axs[0])
+        # ses_obj.draw_arena(axs[0])
+        targets = ses_obj.draw_target(axs[0], draw_hex=True)
 
         # trajectory and target
         ll, = axs[0].plot([], [], 'orange', alpha=0.25)
-        targets = self.draw_target(axs[0], draw_hex=True)
 
         # put a cross on the current trial target
         trial_target = trial_obj.trial_target
         axs[0].scatter(*trial_target, s=125, alpha=0.5,
                        marker='x', linewidths=3)
 
+        # mouse location
         radius = 35
         circle = plt.Circle((0, 0), radius, color='tab:blue',
                             linewidth=2, fill=False)
         axs[0].add_patch(circle)
 
         # RIGHT PLOT
-        im = axs[1].imshow(self.get_frame(0), cmap='gray')
+        im = axs[1].imshow(ses_obj.get_frame(0), cmap='gray')
         axs[1].invert_xaxis()
 
         # add an indicator for chirp
@@ -228,41 +250,36 @@ class SessionData(ArenaMap):
         axs[1].axis('off')
         axs[1].set_aspect('equal')
 
-        # variables to keep track of chirps
-        self._chirp_count = 0
-        self._chirp_active = False
-        self._chirp_point = None
-        self._ind_right = ind_right
-        self._step_count = 0
+        self._init_vars(ind_right)
         pbar = tqdm.tqdm(total=self.n_frame + 1, position=0, leave=True)
 
         def animate(i):
-            axs[0].set_title('Frame %d, Time %.3f Sec' % (i, self.time[i]))
+            axs[0].set_title('Frame %d, Time %.3f Sec' % (i, ses_obj.time[i]))
 
             # active -> inactive
-            if self._chirp_active:
-                self._step_count += 1
-                if self._step_count == 10:
-                    self._chirp_active = False
-                    self._chirp_point.set_facecolor('r')
-                    self._ind_right.set_visible(False)
-                    self._step_count = 0
+            if self.chirp_active:
+                self.step_count += 1
+                if self.step_count == 10:
+                    self.chirp_active = False
+                    self.chirp_point.set_facecolor('r')
+                    self.ind_right.set_visible(False)
+                    self.step_count = 0
 
             # inactive -> active
-            if self.chirped[i] == 1:
-                self._chirp_count += 1
-                self._chirp_active = True
+            if ses_obj.chirped[i] == 1:
+                self.chirp_count += 1
+                self.chirp_active = True
 
-                self._chirp_point = targets[self.chirp_loc[i]]
-                self._chirp_point.set_facecolor('b')
-                self._ind_right.set_visible(True)
+                self.chirp_point = targets[ses_obj.chirp_loc[i]]
+                self.chirp_point.set_facecolor('b')
+                self.ind_right.set_visible(True)
 
-                axs[0].scatter(self.x[i], self.y[i], marker='s',
-                               color=colors[self._chirp_count - 1])
+                axs[0].scatter(ses_obj.x[i], ses_obj.y[i], marker='s',
+                               color=self.select_color(self.chirp_count - 1))
 
-            ll.set_data(self.x[self.start_idx:i], self.y[self.start_idx:i])
-            circle.center = (self.x[i], self.y[i])
-            im.set_data(self.get_frame(i))
+            ll.set_data(ses_obj.x[self.start_idx:i], ses_obj.y[self.start_idx:i])
+            circle.center = (ses_obj.x[i], ses_obj.y[i])
+            im.set_data(ses_obj.get_frame(i))
 
             pbar.update(1)
 
@@ -276,8 +293,8 @@ class SessionData(ArenaMap):
 
         # video path
         target_fps = 10
-        file_path = os.path.join('./data/video', self.name)
-        file_name = 's%d_t%d' % (self.session, trial_idx) + '.mp4'
+        file_path = os.path.join('./data/video', ses_obj.name)
+        file_name = 's%d_t%d' % (ses_obj.session, trial_idx) + '.mp4'
 
         if not os.path.exists(file_path):
             os.makedirs(file_path)
@@ -286,6 +303,7 @@ class SessionData(ArenaMap):
         writer = animation.writers['ffmpeg'](fps=target_fps, bitrate=4096)
         ani.save(os.path.join(file_path, file_name), writer=writer)
         pbar.close()
+
 
 class TrialData(ArenaMap):
 
