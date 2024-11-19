@@ -17,25 +17,33 @@ matplotlib.rcParams["image.origin"] = "lower"
 
 class ArenaMap(ABC):
 
+    def _draw_hex(self, plot_ax, center, alpha=1):
+        plot_ax.add_patch(patches.RegularPolygon(
+            center, numVertices=6,
+            radius=TILE_RAD_MM,
+            orientation=TILE_ANGLE,
+            facecolor='w', edgecolor='g',
+            lw=1, alpha=alpha))
+
     def draw_arena(self, plot_ax, alpha=1):
         for idx in range(len(TILE_CENTER[0])):
-            plot_ax.add_patch(patches.RegularPolygon(
-                (TILE_CENTER[0][idx],
-                 TILE_CENTER[1][idx]),
-                numVertices=6, radius=TILE_RAD_MM,
-                orientation=TILE_ANGLE,
-                facecolor='w', edgecolor='g',
-                lw=1, alpha=alpha))
+            self._draw_hex(plot_ax, (TILE_CENTER[0][idx],
+                                     TILE_CENTER[1][idx]), alpha)
 
-    def draw_target(self, plot_ax, alpha=0.5):
-        return [plot_ax.scatter(*target, s=256, alpha=alpha,
+    def draw_target(self, plot_ax, alpha=0.5, draw_hex=False):
+        if draw_hex:
+            for t in self.target.T:
+                self._draw_hex(plot_ax, t)
+
+        return [plot_ax.scatter(*target, s=256,
+                                alpha=alpha,
                                 facecolors='r',
                                 edgecolors='none')
                 for target in self.target.T]
 
+    # Deprecated: Will switch to CCF at some point
     def get_center(self):
         return ARENA_CENTER
-
 
 class SessionData(ArenaMap):
 
@@ -158,7 +166,7 @@ class SessionData(ArenaMap):
 
         return start_idx, n_frame
 
-    # append 550 frames to the end of the trial for visualization
+    # append 550 frames (~ ISI time) to the end of the trial for visualization
     def _frame_index(self, trial_idx):
         return self._trial_index(trial_idx, append=550)
 
@@ -191,7 +199,7 @@ class SessionData(ArenaMap):
 
         # trajectory and target
         ll, = axs[0].plot([], [], 'orange', alpha=0.25)
-        targets = self.draw_target(axs[0])
+        targets = self.draw_target(axs[0], draw_hex=True)
 
         # put a cross on the current trial target
         trial_target = trial_obj.trial_target
