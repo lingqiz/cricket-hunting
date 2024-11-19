@@ -6,7 +6,7 @@ import os
 from scipy.signal import butter, filtfilt
 
 from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI_FRAME, TRK_CTR, \
-    TILE_CENTER, TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, TILE_RADIUS
+    TILE_CENTER, TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, TRIG_RADIUS
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -195,7 +195,7 @@ class DataPlot:
 
     def _check_tile_visit(self, stop_point):
         dist = np.linalg.norm(self.target_xy - stop_point.reshape([2, 1]), axis=0)
-        tile_visit = (dist <= TILE_RADIUS)
+        tile_visit = (dist <= TRIG_RADIUS)
         if np.sum(tile_visit) > 0:
             tile_index = np.where(tile_visit)[0][0]
             self.tile_visited[tile_index] = True
@@ -449,10 +449,10 @@ class StopLocation(ArenaMap):
         counter = 0
         for idx in range(self.target.shape[1]):
             dist = np.linalg.norm(locations - self.target[:, idx].reshape(-1, 1), axis=0)
-            tile_visit = (dist <= TILE_RADIUS).astype(int)
+            tile_visit = (dist <= TRIG_RADIUS).astype(int)
             counter += (np.sum(tile_visit) > 0).astype(int)
 
-        start_ind = np.any(np.linalg.norm(self.target - self.start, axis=0) <= TILE_RADIUS)
+        start_ind = np.any(np.linalg.norm(self.target - self.start, axis=0) <= TRIG_RADIUS)
         return counter - start_ind.astype(int)
 
     # useful quantities to calculate
