@@ -5,6 +5,7 @@ from datetime import datetime
 
 import pathlib
 DIR_ROOT = pathlib.Path(__file__).parent.parent.resolve()
+DIR_HOME = pathlib.Path.home()
 
 # unit conversions
 ZEBER_TO_DLC = 1896 / 72248
@@ -70,7 +71,8 @@ TILE_CENTER = arena_map()
 ARENA_CENTER = (1140, 1200)
 
 # Organize files for different mice cohorts
-video_base = '/groups/dennis/dennislab/data/rig'
+video_base = os.path.join(DIR_HOME,
+            'Desktop/dennislab/data/rig')
 
 def time_diff(time1, time2):
     # Convert time strings to datetime.time objects
