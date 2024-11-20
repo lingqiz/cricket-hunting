@@ -61,9 +61,9 @@ def ccf_map():
     tile_centers = pd.read_csv(filename)
     mm_centers = tile_centers.copy()
     mm_centers.ls = np.multiply(mm_centers.ls, ZABER_TO_MM)
-    mm_centers.ax = np.multiply(mm_centers.ax3, ZABER_TO_MM)
+    mm_centers.ax3 = np.multiply(mm_centers.ax3, ZABER_TO_MM)
     return (mm_centers.ls.to_numpy(),
-            mm_centers.ax.to_numpy())
+            mm_centers.ax3.to_numpy())
 
 # Deprecated: Change to CCF
 TILE_CENTER = arena_map()

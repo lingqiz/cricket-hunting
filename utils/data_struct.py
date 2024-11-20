@@ -52,6 +52,8 @@ class ArenaMap():
 class SessionData(ArenaMap):
 
     def __init__(self, name, ses, df, video_path):
+        super().__init__()
+
         # name and session
         self.name = name
         self.session = ses
@@ -355,6 +357,7 @@ class TrialData(ArenaMap):
 
     def __init__(self, ses_ref, name, session, trial_idx, time,
                  chirp, x, y, target, chirp_loc, catch=True):
+        super().__init__()
 
         # record trial information
         self.ses_ref = ses_ref
@@ -409,6 +412,8 @@ class StopLocation(ArenaMap):
     def __init__(self, loc, start, end, t, target,
                  rotate=False, center=False,
                  filter_stop=False):
+        super().__init__()
+
         self.loc = loc
         self.start = start.reshape(-1, 1)
         self.end = end.reshape(-1, 1)
