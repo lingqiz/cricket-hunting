@@ -54,6 +54,18 @@ def arena_map():
     return (mm_centers.ls_guess.to_numpy(),
             mm_centers.ax_new_guess.to_numpy())
 
+# CCF Map
+# TODO: Unified Coordinate System
+def ccf_map():
+    filename = os.path.join(DIR_ROOT, 'data/zaber_ccf.csv')
+    tile_centers = pd.read_csv(filename)
+    mm_centers = tile_centers.copy()
+    mm_centers.ls = np.multiply(mm_centers.ls, ZABER_TO_MM)
+    mm_centers.ax = np.multiply(mm_centers.ax3, ZABER_TO_MM)
+    return (mm_centers.ls.to_numpy(),
+            mm_centers.ax.to_numpy())
+
+# Deprecated: Change to CCF
 TILE_CENTER = arena_map()
 ARENA_CENTER = (1140, 1200)
 

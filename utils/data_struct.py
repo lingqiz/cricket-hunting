@@ -1,4 +1,3 @@
-from abc import ABC
 import cv2
 import numpy as np
 import tqdm
@@ -15,7 +14,11 @@ from matplotlib import patches
 matplotlib.rcParams["image.origin"] = "lower"
 
 
-class ArenaMap(ABC):
+class ArenaMap():
+
+    def __init__(self):
+        self.tile_center = TILE_CENTER
+        self.arena_center = ARENA_CENTER
 
     def _draw_hex(self, plot_ax, center, alpha=1):
         plot_ax.add_patch(patches.RegularPolygon(
@@ -26,9 +29,9 @@ class ArenaMap(ABC):
             lw=1, alpha=alpha))
 
     def draw_arena(self, plot_ax, alpha=1):
-        for idx in range(len(TILE_CENTER[0])):
-            self._draw_hex(plot_ax, (TILE_CENTER[0][idx],
-                                     TILE_CENTER[1][idx]), alpha)
+        for idx in range(len(self.tile_center[0])):
+            self._draw_hex(plot_ax, (self.tile_center[0][idx],
+                                     self.tile_center[1][idx]), alpha)
 
     def draw_target(self, plot_ax, alpha=0.5, draw_hex=False):
         if draw_hex:
@@ -43,7 +46,8 @@ class ArenaMap(ABC):
 
     # Deprecated: Will switch to CCF at some point
     def get_center(self):
-        return ARENA_CENTER
+        return self.arena_center
+
 
 class SessionData(ArenaMap):
 
@@ -120,8 +124,9 @@ class SessionData(ArenaMap):
         start_idx, n_frame = self._trial_index(trial_idx)
         end_idx = start_idx + n_frame
 
-        return TrialData(self, self.name, self.session, trial_idx, self.time[start_idx:end_idx], self.chirped[start_idx:end_idx],
-                         self.x[start_idx:end_idx], self.y[start_idx:end_idx], self.target, self.chirp_loc[start_idx:end_idx])
+        return TrialData(self, self.name, self.session, trial_idx, self.time[start_idx:end_idx],
+                         self.chirped[start_idx:end_idx], self.x[start_idx:end_idx],
+                         self.y[start_idx:end_idx], self.target, self.chirp_loc[start_idx:end_idx])
 
     def _target(self, loc):
         loc = loc[1:-1].split(',')
@@ -185,7 +190,7 @@ class SessionData(ArenaMap):
                     DataPlot().trial_video(self, idx)
 
 
-class DataPlot:
+class DataPlot():
 
     def __init__(self):
         self.target_fps = 10
@@ -397,6 +402,7 @@ class TrialData(ArenaMap):
                             self.time[self.chirp == 1],
                             self.target, rotate=rotate,
                             center=center, filter_stop=filter_stop)
+
 
 # class for different data reductions of the trial
 class StopLocation(ArenaMap):
