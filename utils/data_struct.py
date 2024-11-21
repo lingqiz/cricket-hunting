@@ -385,9 +385,10 @@ class TrialData(ArenaMap):
 
         self.catch = catch
 
-        # number of chirp locations must be 2 or 3
+        # number of chirp locations should be 2 or 3
         # (last, current, and next)
-        assert len(chirp_loc) >= 2 and len(chirp_loc) <= 3
+        if len(chirp_loc) < 2 or len(chirp_loc) > 3:
+            raise Warning("chrip location is %d" % len(chirp_loc))
 
         # x, y data
         self.x = x
