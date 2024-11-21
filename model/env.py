@@ -57,4 +57,5 @@ class Modulo(ArenaMap):
         '''
         Calculate the sound level (dB) at a given distance
         '''
-        return self.base - self.bg - 20 * np.log10(dist / self.dr)
+        # add 10 mm to distance to avoid log(0)
+        return self.base - self.bg - 20 * np.log10((dist + 10) / self.dr)
