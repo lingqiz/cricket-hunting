@@ -122,8 +122,8 @@ class SessionData(ArenaMap):
 
         return [self._construct_trial(idx) for idx in range(self.n_catch)]
 
-    def _construct_trial(self, trial_idx):
-        start_idx, n_frame = self._trial_index(trial_idx)
+    def _construct_trial(self, trial_idx, eos=False):
+        start_idx, n_frame = self._trial_index(trial_idx, eos=eos)
         end_idx = start_idx + n_frame
 
         return TrialData(self, self.name, self.session, trial_idx, self.time[start_idx:end_idx],
@@ -150,7 +150,7 @@ class SessionData(ArenaMap):
         return cv2.resize(frame, dsize=None, fx=0.5, fy=0.5)
 
     # note that average frame rate * 30 sec ISI ~= 535 frames
-    def _trial_index(self, trial_idx, prepend=ISI_FRAME, append=0):
+    def _trial_index(self, trial_idx, prepend=ISI_FRAME, append=0, eos=False):
         trigger_time = np.where(self.triggered == 1)[0]
         session_length = self.time.shape[0]
 
@@ -159,25 +159,29 @@ class SessionData(ArenaMap):
             return 0, session_length
 
         # with cricket catch
-        if trial_idx == 0:
-            start_idx = 0
-            n_frame = trigger_time[0] + append
+        if eos:
+            start_idx = trigger_time[-1] + prepend
+            n_frame = session_length - start_idx
 
         else:
-            start_idx = trigger_time[trial_idx - 1] + prepend
-            n_frame = trigger_time[trial_idx] - start_idx + append
+            if trial_idx == 0:
+                start_idx = 0
+                n_frame = trigger_time[0] + append
+            else:
+                start_idx = trigger_time[trial_idx - 1] + prepend
+                n_frame = trigger_time[trial_idx] - start_idx + append
 
-        # check if end of session
-        if start_idx + n_frame > session_length:
-            n_frame = session_length - start_idx
+            # check if exceed end of session
+            if start_idx + n_frame > session_length:
+                n_frame = session_length - start_idx
 
         return start_idx, n_frame
 
     # append 550 frames (~ ISI time) to the end of the trial for visualization
-    def _frame_index(self, trial_idx):
-        return self._trial_index(trial_idx, append=550)
+    def _frame_index(self, trial_idx, eos=False):
+        return self._trial_index(trial_idx, append=550, eos=eos)
 
-    def all_video(self, max_frame=16500):
+    def all_video(self, max_frame=16500, eos=False):
         n_trigger = np.where(self.triggered == 1)[0].shape[0]
 
         if n_trigger == 0:
@@ -190,6 +194,10 @@ class SessionData(ArenaMap):
                     print('Skip Session %d, Trial %d: %d frames' % (self.session, idx, n_frame))
                 else:
                     DataPlot().trial_video(self, idx)
+
+            # include end of session
+            if eos:
+                DataPlot().trial_video(self, n_trigger, eos=True)
 
 
 class DataPlot():
@@ -307,16 +315,16 @@ class DataPlot():
         # update progress bar
         self.pbar.update(1)
 
-    def trial_video(self, ses_obj, trial_idx):
+    def trial_video(self, ses_obj, trial_idx, eos=False):
         '''
         Generate a video for visualizing the trial
         '''
         # init data variables
-        trial_obj = ses_obj._construct_trial(trial_idx)
+        trial_obj = ses_obj._construct_trial(trial_idx, eos=eos)
         print('%s s%d, t%d' % (ses_obj.name, ses_obj.session, trial_idx))
 
-        self.start_idx, self.n_frame = ses_obj._frame_index(trial_idx)
-        _, self.n_frame_hunting = ses_obj._trial_index(trial_idx, )
+        self.start_idx, self.n_frame = ses_obj._frame_index(trial_idx, eos=eos)
+        _, self.n_frame_hunting = ses_obj._trial_index(trial_idx, eos=eos)
 
         n_chip = ses_obj.chirped[self.start_idx:self.start_idx + self.n_frame_hunting].sum()
         print('number of active chirps: %d' % n_chip)

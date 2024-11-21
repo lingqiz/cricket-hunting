@@ -4,16 +4,12 @@ import sys
 from utils.data_loader import *
 from utils.data_struct import *
 
-# NAME = 'p20'
-# SESS = [49, 50, 51, 52]
-
-# read in name and session number
-# from command line
+# read in name and session number from command line
+# example: python3 generate_video.py p16 12 39 40
 name = sys.argv[1]
 sess = [int(s) for s in sys.argv[2:]]
 
 all_files = ALL_MICE[name]
-
 all_data = []
 for idx, file in enumerate(all_files):
     data_frame = pd.read_csv(file[0], low_memory=False)
@@ -29,5 +25,6 @@ for ses_idx in sess:
     print('cricket time', np.where(data.triggered == 1)[0])
 
     # generate video for the session
+    # set eos to True to include the end of session
     print('gennrating video for session', ses_idx)
-    data.all_video(max_frame=64800)
+    data.all_video(max_frame=64800, eos=True)
