@@ -1,8 +1,6 @@
 from utils.data_loader import ccf_map, TRIG_RADIUS
 from utils.data_struct import ArenaMap
 import numpy as np
-import pygame, pathlib, os
-PKG_ROOT = pathlib.Path(__file__).parent.resolve()
 
 class Modulo(ArenaMap):
     def __init__(self):
@@ -10,6 +8,7 @@ class Modulo(ArenaMap):
 
         # arena information
         self.tile_center = ccf_map()
+        # tile coordinates [2, N]
         self.tiles = np.array([self.tile_center[0],
                                self.tile_center[1]])
         self.n_tiles = self.tiles.shape[1]
@@ -25,11 +24,7 @@ class Modulo(ArenaMap):
         self.noise = 5
         # ref distance (mm)
         self.dr = 100
-
-        pygame.mixer.init()
-        file_path = os.path.join(PKG_ROOT, 'chirp.wav')
-        self.chirp = pygame.mixer.Sound(file_path)
-
+        
     def _init_target(self, n=16, stratified=True):
         # n_tiles choose n
         if stratified:
@@ -41,11 +36,15 @@ class Modulo(ArenaMap):
         else:
             self.target_idx = np.random.choice(self.n_tiles, n, replace=False)
 
+        # target coordinates
         self.target = self.tiles[:, self.target_idx]
         self.target_count = 0
 
     def sample_tile(self):
         return self.tiles[:, np.random.choice(self.n_tiles, 1, replace=False)]
+    
+    def get_tile(self, index):
+        return self.tiles[:, index].reshape([2, -1])
 
     def draw_current(self, plot_ax):
         plot_ax.plot(self.current[0], self.current[1], 'gx')
@@ -85,7 +84,7 @@ class Modulo(ArenaMap):
     def sound_volume(self, dist=-1, pos=None):
         '''
         Calculate sound volume (for demo, not calibrated)
-        '''
+        '''        
         if dist == -1:
             dist = self.distance(pos)
 
