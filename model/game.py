@@ -2,6 +2,7 @@ import pygame
 import pathlib, os
 import math
 import numpy as np
+import time
 from .env import Modulo
 from .agent import GameAgent
 PKG_ROOT = pathlib.Path(__file__).parent.resolve()
@@ -33,9 +34,15 @@ class ModuloGame():
         self.black = (0, 0, 0)
         self.circle_color = (50, 150, 245)
         self.circle_radius = 30
-
         self.text_color = (50, 150, 245)
         self.font = pygame.font.SysFont(None, 36)
+
+        # game variables
+        self.running = False
+        self.debug = False
+
+        self.stop_threshold = 1.0
+        self.stop_time = time.time()
 
     def set_volume(self):
         volume = self.arena.sound_volume(pos=self.agent.get_loc())
@@ -56,12 +63,15 @@ class ModuloGame():
         # Key press handling
         keys = pygame.key.get_pressed()
         if keys[pygame.K_a]:
+            self.stop_time = time.time()
             self.agent.turn_left()
 
         if keys[pygame.K_d]:
+            self.stop_time = time.time()
             self.agent.turn_right()
 
         if keys[pygame.K_w]:
+            self.stop_time = time.time()
             self.agent.move_forward()
 
         if keys[pygame.K_SPACE]:
@@ -71,11 +81,23 @@ class ModuloGame():
         hd = np.rad2deg(self.agent.ori)
         x = int(self.agent.loc[0])
         y = int(self.agent.loc[1])
+
         heading_text = self.font.render(f'Rotated Heading: {hd:.0f}', True, self.text_color)
         location_text = self.font.render(f'Coordinate: ({x:.0f}, {y:.0f})', True, self.text_color)
+        timer_text = self.font.render(f'Time: {time.time() - self.stop_time:.2f}', True, self.text_color)
 
         self.screen.blit(heading_text, (10, self.screen_size - 30))
         self.screen.blit(location_text, (10, self.screen_size - 60))
+        self.screen.blit(timer_text, (10, self.screen_size - 90))
+
+    def _sound(self):
+        stop_duration = time.time() - self.stop_time
+        if stop_duration > self.stop_threshold:
+            self.set_volume()
+            self.play_sound()
+
+            # reset timer plus 1 second ISI
+            self.stop_time = time.time() + 1.0
 
     def _draw_mouse(self):
         # flip y-axis for screen coordinates
@@ -106,8 +128,12 @@ class ModuloGame():
             self.screen.fill(self.white)
             self._draw_mouse()
 
+            # Sound mechanism
+            self._sound()
+
             # Debug text
-            self._debug_text()
+            if self.debug:
+                self._debug_text()
 
             # Update the screen
             pygame.display.flip()
