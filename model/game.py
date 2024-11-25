@@ -1,6 +1,7 @@
 import pygame
 import pathlib, os
 import math
+import numpy as np
 from .env import Modulo
 from .agent import GameAgent
 PKG_ROOT = pathlib.Path(__file__).parent.resolve()
@@ -27,11 +28,14 @@ class ModuloGame():
                                                self.screen_size))
         pygame.display.set_caption("Modulo")
 
-        # game variables
+        # display variables
         self.white = (255, 255, 255)
         self.black = (0, 0, 0)
         self.circle_color = (50, 150, 245)
         self.circle_radius = 30
+
+        self.text_color = (50, 150, 245)
+        self.font = pygame.font.SysFont(None, 36)
 
     def set_volume(self):
         volume = self.arena.sound_volume(pos=self.agent.get_loc())
@@ -63,12 +67,25 @@ class ModuloGame():
         if keys[pygame.K_SPACE]:
             self.running = False
 
+    def _debug_text(self):
+        hd = np.rad2deg(self.agent.ori)
+        x = int(self.agent.loc[0])
+        y = int(self.agent.loc[1])
+        heading_text = self.font.render(f'Rotated Heading: {hd:.0f}', True, self.text_color)
+        location_text = self.font.render(f'Coordinate: ({x:.0f}, {y:.0f})', True, self.text_color)
+
+        self.screen.blit(heading_text, (10, self.screen_size - 30))
+        self.screen.blit(location_text, (10, self.screen_size - 60))
+
     def _draw_mouse(self):
-        # Calculate the end point of the radius line
-        pos = self.agent.loc
+        # flip y-axis for screen coordinates
+        pos = np.copy(self.agent.loc)
+        pos[1] = self.screen_size - pos[1]
+
+        # flip orientation along y-axis
         heading = self.agent.ori
         end_x = pos[0] + self.circle_radius * math.cos(heading)
-        end_y = pos[1] + self.circle_radius * math.sin(heading)
+        end_y = pos[1] - self.circle_radius * math.sin(heading)
 
         # Draw open circle and radius line
         pygame.draw.circle(self.screen, self.circle_color,
@@ -85,10 +102,12 @@ class ModuloGame():
             # Key press
             self._key_press()
 
+            # Draw elements
             self.screen.fill(self.white)
-
-            # Draw circle
             self._draw_mouse()
+
+            # Debug text
+            self._debug_text()
 
             # Update the screen
             pygame.display.flip()
