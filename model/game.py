@@ -5,11 +5,12 @@ import numpy as np
 import time
 from .env import Modulo
 from .agent import GameAgent
+from utils.data_loader import TILE_RAD_MM
 PKG_ROOT = pathlib.Path(__file__).parent.resolve()
 
 
 class ModuloGame():
-    def __init__(self):
+    def __init__(self, screen_size=1080):
         # init arena and agent
         self.arena = Modulo()
         self.agent = GameAgent(self.arena)
@@ -24,18 +25,21 @@ class ModuloGame():
 
         # init game
         pygame.init()
-        self.screen_size = 2000
+        self.screen_size = screen_size
         self.screen = pygame.display.set_mode((self.screen_size,
                                                self.screen_size))
         pygame.display.set_caption("Modulo")
 
         # display variables
+        self.ref_size = 2300
         self.white = (255, 255, 255)
         self.black = (0, 0, 0)
         self.circle_color = (50, 150, 245)
-        self.circle_radius = 30
+        self.circle_radius = 30 / self.ref_size * self.screen_size
         self.text_color = (50, 150, 245)
         self.font = pygame.font.SysFont(None, 36)
+        self.score_font = pygame.font.SysFont(None, 48)
+        self.tile_rad = TILE_RAD_MM / self.ref_size * self.screen_size
 
         # game variables
         self.running = False
@@ -58,7 +62,6 @@ class ModuloGame():
         for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
-                    self.close()
 
         # Key press handling
         keys = pygame.key.get_pressed()
@@ -77,6 +80,30 @@ class ModuloGame():
         if keys[pygame.K_SPACE]:
             self.running = False
 
+    def _check_stop(self):
+        stop_duration = time.time() - self.stop_time
+        if stop_duration > self.stop_threshold:
+            capture = self.arena.check_capture(self.agent.get_loc())
+
+            if capture:
+                self.stop_time = time.time() + 10.0
+
+            else:
+                self.set_volume()
+                self.play_sound()
+
+                # reset timer plus 1 second ISI
+                self.stop_time = time.time() + 1.0
+
+    def _sound(self):
+        stop_duration = time.time() - self.stop_time
+        if stop_duration > self.stop_threshold:
+            self.set_volume()
+            self.play_sound()
+
+            # reset timer plus 1 second ISI
+            self.stop_time = time.time() + 1.0
+
     def _debug_text(self):
         hd = np.rad2deg(self.agent.ori)
         x = int(self.agent.loc[0])
@@ -90,18 +117,14 @@ class ModuloGame():
         self.screen.blit(location_text, (10, self.screen_size - 60))
         self.screen.blit(timer_text, (10, self.screen_size - 90))
 
-    def _sound(self):
-        stop_duration = time.time() - self.stop_time
-        if stop_duration > self.stop_threshold:
-            self.set_volume()
-            self.play_sound()
-
-            # reset timer plus 1 second ISI
-            self.stop_time = time.time() + 1.0
+    def _score_text(self):
+        score = self.arena.target_count
+        score_text = self.score_font.render(f'Capture: {score}', True, self.text_color)
+        self.screen.blit(score_text, (self.screen_size - 200, 30))
 
     def _draw_mouse(self):
         # flip y-axis for screen coordinates
-        pos = np.copy(self.agent.loc)
+        pos = np.copy(self.agent.loc) / self.ref_size * self.screen_size
         pos[1] = self.screen_size - pos[1]
 
         # flip orientation along y-axis
@@ -118,20 +141,48 @@ class ModuloGame():
                          (int(pos[0]), int(pos[1])),
                          (int(end_x), int(end_y)), 4)
 
+    def _draw_hex(self, center):
+        # coordinates are flipped for screen display
+        center = np.copy(center) / self.ref_size * self.screen_size
+        center[1] = self.screen_size - center[1]
+
+        # Calculate the vertices of the hexagon
+        vertices = [
+            (
+                center[0] + self.tile_rad * math.cos(math.pi / 3 * i),
+                center[1] - self.tile_rad * math.sin(math.pi / 3 * i)
+            )
+            for i in range(6)
+        ]
+
+        # Draw the hexagon
+        pygame.draw.polygon(self.screen, (255, 255, 255), vertices, 0)  # Fill with white
+        pygame.draw.polygon(self.screen, (76, 181, 5), vertices, 2)  # Green border
+
+    def _draw_arena(self):
+        # for center in self.arena.tiles:
+            # self._draw_hex(center)
+
+        for i in range(self.arena.n_tiles):
+            self._draw_hex(self.arena.tiles[:, i])
+
     def run_game(self):
         self.running = True
         while self.running:
             # Key press
             self._key_press()
 
-            # Draw elements
+            # Draw visual elements
             self.screen.fill(self.white)
+            self._draw_arena()
             self._draw_mouse()
 
             # Sound mechanism
+            self._check_stop()
             self._sound()
 
-            # Debug text
+            # Draw text
+            self._score_text()
             if self.debug:
                 self._debug_text()
 
