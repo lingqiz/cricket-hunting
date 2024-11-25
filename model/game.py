@@ -28,8 +28,10 @@ class ModuloGame():
         pygame.display.set_caption("Modulo")
 
         # game variables
-        self.circle_radius = 50
+        self.white = (255, 255, 255)
         self.circle_color = (50, 150, 245)
+        self.circle_radius = 50
+        
 
     def set_volume(self):
         volume = self.arena.sound_volume(pos=self.agent.get_loc())
@@ -57,6 +59,8 @@ class ModuloGame():
     def run_game(self):
         self.running = True
         while self.running:
+            self.screen.fill(self.white)
+            
             # Draw circle
             self._draw_mouse()
 
