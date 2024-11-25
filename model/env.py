@@ -1,4 +1,4 @@
-from utils.data_loader import ccf_map
+from utils.data_loader import ccf_map, TRIG_RADIUS
 from utils.data_struct import ArenaMap
 import numpy as np
 import pygame, pathlib, os
@@ -47,15 +47,43 @@ class Modulo(ArenaMap):
     def draw_current(self, plot_ax):
         plot_ax.plot(self.current[0], self.current[1], 'gx')
 
+    def check_capture(self, pos):
+        dist = self.distance(pos)
+        
+        if dist <= TRIG_RADIUS:
+            self.capture()
+            return True
+        
+        return False
+
+    def capture(self):
+        self.target_count += 1
+        if self.target_count < self.target.shape[1]:
+            self.current = self.target[:, self.target_count]
+
     def distance(self, pos):
         '''
         Calculate the distance to the target position
+        pos: numpy array of positions [N, 2]
         '''
-        return np.linalg.norm(self.current - pos)
+        return np.linalg.norm(self.current - pos, axis=1)
 
-    def sound_level(self, dist):
+    def sound_level(self, dist=-1, pos=None):
         '''
-        Calculate the sound level (dB) at a given distance
+        Calculate the sound level (dB)
         '''
         # add 10 mm to distance to avoid log(0)
+
+        if dist == -1:
+            dist = self.distance(pos)
+        
         return self.base - self.bg - 20 * np.log10((dist + 10) / self.dr)
+    
+    def sound_volume(self, dist=-1, pos=None):
+        '''
+        Calculate sound volume (for demo, not calibrated)
+        '''
+        if dist == -1:
+            dist = self.distance(pos)
+
+        return np.clip(self.dr / dist, 0, 1)
