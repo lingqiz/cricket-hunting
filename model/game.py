@@ -26,8 +26,9 @@ class ModuloGame():
         # init game
         pygame.init()
         self.screen_size = screen_size
-        self.screen = pygame.display.set_mode((self.screen_size,
-                                               self.screen_size))
+        self.window_size = screen_size * 0.175
+        self.screen = pygame.display.set_mode((self.window_size,
+                                               self.window_size))
         pygame.display.set_caption("Modulo")
 
         # display variables
@@ -37,8 +38,8 @@ class ModuloGame():
         self.circle_color = (50, 150, 245)
         self.circle_radius = 30 / self.ref_size * self.screen_size
         self.text_color = (50, 150, 245)
-        self.font = pygame.font.SysFont(None, 36)
-        self.score_font = pygame.font.SysFont(None, 48)
+        self.font = pygame.font.SysFont(None, 18)
+        self.score_font = pygame.font.SysFont(None, 24)
         self.tile_rad = TILE_RAD_MM / self.ref_size * self.screen_size
 
         # game variables
@@ -113,19 +114,19 @@ class ModuloGame():
         location_text = self.font.render(f'Coordinate: ({x:.0f}, {y:.0f})', True, self.text_color)
         timer_text = self.font.render(f'Time: {time.time() - self.stop_time:.2f}', True, self.text_color)
 
-        self.screen.blit(heading_text, (10, self.screen_size - 30))
-        self.screen.blit(location_text, (10, self.screen_size - 60))
-        self.screen.blit(timer_text, (10, self.screen_size - 90))
+        self.screen.blit(heading_text, (10, self.window_size - 15))
+        self.screen.blit(location_text, (10, self.window_size - 30))
+        self.screen.blit(timer_text, (10, self.window_size - 45))
 
     def _score_text(self):
         score = self.arena.target_count
         score_text = self.score_font.render(f'Capture: {score}', True, self.text_color)
-        self.screen.blit(score_text, (self.screen_size - 200, 30))
+        self.screen.blit(score_text, (self.window_size - 100, 10))
 
-    def _draw_mouse(self):
-        # flip y-axis for screen coordinates
-        pos = np.copy(self.agent.loc) / self.ref_size * self.screen_size
-        pos[1] = self.screen_size - pos[1]
+    def _draw_mouse(self):        
+        # center of the viewport
+        pos = np.array([self.window_size, 
+                        self.window_size]) / 2
 
         # flip orientation along y-axis
         heading = self.agent.ori
@@ -141,7 +142,7 @@ class ModuloGame():
                          (int(pos[0]), int(pos[1])),
                          (int(end_x), int(end_y)), 4)
 
-    def _draw_hex(self, center):
+    def _draw_hex(self, center, scr_origin):
         # coordinates are flipped for screen display
         center = np.copy(center) / self.ref_size * self.screen_size
         center[1] = self.screen_size - center[1]
@@ -149,22 +150,25 @@ class ModuloGame():
         # Calculate the vertices of the hexagon
         vertices = [
             (
-                center[0] + self.tile_rad * math.cos(math.pi / 3 * i),
-                center[1] - self.tile_rad * math.sin(math.pi / 3 * i)
+                center[0] + self.tile_rad * math.cos(math.pi / 3 * i) - scr_origin[0],
+                center[1] - self.tile_rad * math.sin(math.pi / 3 * i) - scr_origin[1]
             )
-            for i in range(6)
-        ]
+            for i in range(6)]
 
         # Draw the hexagon
         pygame.draw.polygon(self.screen, (255, 255, 255), vertices, 0)  # Fill with white
         pygame.draw.polygon(self.screen, (76, 181, 5), vertices, 2)  # Green border
 
     def _draw_arena(self):
-        # for center in self.arena.tiles:
-            # self._draw_hex(center)
-
+        # compute view port coordinate origin
+        # flip y-axis for screen coordinates
+        mouse_loc = np.copy(self.agent.loc) / self.ref_size * self.screen_size
+        mouse_loc[1] = self.screen_size - mouse_loc[1]        
+        scr_orign = mouse_loc - np.array([self.window_size, 
+                                          self.window_size]).reshape([2, -1]) / 2
+                
         for i in range(self.arena.n_tiles):
-            self._draw_hex(self.arena.tiles[:, i])
+            self._draw_hex(self.arena.tiles[:, i], scr_orign.squeeze())
 
     def run_game(self):
         self.running = True
