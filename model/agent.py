@@ -8,3 +8,26 @@ class Agent():
 
     def get_loc(self):
         return self.loc
+
+class GameAgent(Agent):
+    def __init__(self, arena):
+        super().__init__(arena)
+
+        self.ang_veloc = 2.5 / 180.0 * np.pi
+        self.velocity = 10
+
+    def turn_left(self):
+        self.ori += self.ang_veloc
+        self.ori %= 2.0 * np.pi
+
+    def turn_right(self):
+        self.ori -= self.ang_veloc
+        self.ori %= 2.0 * np.pi
+
+    def move_forward(self):
+        new_x = self.loc[0] + self.velocity * np.cos(self.ori)
+        new_y = self.loc[1] + self.velocity * np.sin(self.ori)
+
+        # TODO: add boundary check
+
+        self.loc = np.array([new_x, new_y]).reshape([2, -1])

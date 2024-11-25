@@ -2,17 +2,17 @@ import pygame
 import pathlib, os
 import math
 from .env import Modulo
-from .agent import Agent
+from .agent import GameAgent
 PKG_ROOT = pathlib.Path(__file__).parent.resolve()
 
 
 class ModuloGame():
     def __init__(self):
         # init arena and agent
-        self.arena = Modulo()        
-        self.agent = Agent(self.arena)
+        self.arena = Modulo()
+        self.agent = GameAgent(self.arena)
 
-        # init visual 
+        # init visual
 
         # init sound
         pygame.mixer.init()
@@ -22,16 +22,16 @@ class ModuloGame():
 
         # init game
         pygame.init()
-        self.screen_size = 2500
+        self.screen_size = 2000
         self.screen = pygame.display.set_mode((self.screen_size,
                                                self.screen_size))
         pygame.display.set_caption("Modulo")
 
         # game variables
         self.white = (255, 255, 255)
+        self.black = (0, 0, 0)
         self.circle_color = (50, 150, 245)
-        self.circle_radius = 50
-        
+        self.circle_radius = 30
 
     def set_volume(self):
         volume = self.arena.sound_volume(pos=self.agent.get_loc())
@@ -40,12 +40,35 @@ class ModuloGame():
     def play_sound(self):
         self.chirp.play()
 
+    def _key_press(self):
+        '''
+        Control mapping
+        '''
+        for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    self.close()
+
+        # Key press handling
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_a]:
+            self.agent.turn_left()
+
+        if keys[pygame.K_d]:
+            self.agent.turn_right()
+
+        if keys[pygame.K_w]:
+            self.agent.move_forward()
+
+        if keys[pygame.K_SPACE]:
+            self.running = False
+
     def _draw_mouse(self):
         # Calculate the end point of the radius line
         pos = self.agent.loc
         heading = self.agent.ori
-        end_x = pos[0] + self.circle_radius * math.cos(math.radians(heading))
-        end_y = pos[1] - self.circle_radius * math.sin(math.radians(heading))
+        end_x = pos[0] + self.circle_radius * math.cos(heading)
+        end_y = pos[1] + self.circle_radius * math.sin(heading)
 
         # Draw open circle and radius line
         pygame.draw.circle(self.screen, self.circle_color,
@@ -59,8 +82,11 @@ class ModuloGame():
     def run_game(self):
         self.running = True
         while self.running:
+            # Key press
+            self._key_press()
+
             self.screen.fill(self.white)
-            
+
             # Draw circle
             self._draw_mouse()
 
