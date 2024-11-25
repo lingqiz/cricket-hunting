@@ -27,4 +27,4 @@ for ses_idx in sess:
     # generate video for the session
     # set eos to True to include the end of session
     print('gennrating video for session', ses_idx)
-    data.all_video(max_frame=64800, eos=True)
+    data.all_video(max_frame=64800, eos=False)
