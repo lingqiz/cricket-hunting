@@ -16,7 +16,7 @@ class Modulo(ArenaMap):
         self.arena_center = None
 
         self._init_target()
-        self.current = self.target[:, self.target_count]
+        self.current = self.target[:, self.target_count].reshape([2, -1])
 
         # auditory information
         # dB SPL
@@ -44,12 +44,15 @@ class Modulo(ArenaMap):
         self.target = self.tiles[:, self.target_idx]
         self.target_count = 0
 
+    def sample_tile(self):
+        return self.tiles[:, np.random.choice(self.n_tiles, 1, replace=False)]
+
     def draw_current(self, plot_ax):
         plot_ax.plot(self.current[0], self.current[1], 'gx')
 
     def check_capture(self, pos):
         dist = self.distance(pos)
-        
+
         if dist <= TRIG_RADIUS:
             self.capture()
             return True
@@ -59,14 +62,14 @@ class Modulo(ArenaMap):
     def capture(self):
         self.target_count += 1
         if self.target_count < self.target.shape[1]:
-            self.current = self.target[:, self.target_count]
+            self.current = self.target[:, self.target_count].reshape([2, -1])
 
     def distance(self, pos):
         '''
         Calculate the distance to the target position
-        pos: numpy array of positions [N, 2]
+        pos: numpy array of positions [2, N]
         '''
-        return np.linalg.norm(self.current - pos, axis=1)
+        return np.linalg.norm(self.current - pos, axis=0)
 
     def sound_level(self, dist=-1, pos=None):
         '''
