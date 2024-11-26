@@ -31,7 +31,7 @@ class ArenaMap():
         self._init_boundary()
 
     def _init_boundary(self):
-        # boundary defined by hyperplane n @ v <= b
+        # boundary defined by hyperplane n @ v + b <= 0
         n_bounds = 6 # hexagon
         shift = 80
         self.A = np.zeros([2, n_bounds])
@@ -41,12 +41,12 @@ class ArenaMap():
             v1 = self.tiles[:, self.vert_tile[idx]]
             v2 = self.tiles[:, self.vert_tile[(idx + 1) % n_bounds]]
 
-            # normal vector
+            # unit vector
             n = (v2 - v1) / np.linalg.norm(v2 - v1)
-            # rotate n by 90 degrees counter-clockwise
+            # rotate n by 90 degrees counter-clockwise to get norm vector
             n = np.array([-n[1], n[0]])
 
-            # n @ v = b
+            # n @ v = c, b = -c
             b = - np.dot(n, v1) - shift
 
             self.A[:, idx] = n

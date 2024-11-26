@@ -197,7 +197,7 @@ class ModuloGame():
             vertice = self._convert_to_screen(self.arena.vert_bound[:, i]) - scr_origin
             vertices.append((vertice[0], vertice[1]))
 
-        pygame.draw.polygon(self.screen, self.tile_color, vertices, 2)
+        pygame.draw.polygon(self.screen, self.tile_color, vertices, 4)
 
     def _draw_arena(self):
         # compute view port coordinate origin
@@ -226,7 +226,8 @@ class ModuloGame():
             self._draw_mouse()
             self._draw_mask()
 
-            # Sound mechanism
+            # Stop mechanism
+            # include play sound and check capture
             self._check_stop()
 
             # Draw text

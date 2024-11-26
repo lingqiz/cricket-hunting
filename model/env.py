@@ -6,7 +6,7 @@ class Modulo(ArenaMap):
     def __init__(self):
         super().__init__()
 
-        # arena information (override with CCF)
+        # arena information (Override with CCF)
         # TODO: switch to CCF for all calculations
         self.tile_center = ccf_map()
         # tile coordinates [2, N]
