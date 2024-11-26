@@ -10,7 +10,7 @@ PKG_ROOT = pathlib.Path(__file__).parent.resolve()
 
 
 class ModuloGame():
-    def __init__(self, screen_size=1080):
+    def __init__(self, screen_size=1080, debug=False):
         # init arena and agent
         self.arena = Modulo()
         self.agent = GameAgent(self.arena)
@@ -36,6 +36,7 @@ class ModuloGame():
         self.target_color = (240, 122, 122)
         self.circle_color = (50, 150, 245)
         self.circle_radius = 30 / self.ref_size * self.screen_size
+        self.mask_radius = 3.0 * self.circle_radius        
         self.text_color = (50, 150, 245)
         self.font = pygame.font.SysFont(None, 18)
         self.score_font = pygame.font.SysFont(None, 24)
@@ -43,7 +44,7 @@ class ModuloGame():
 
         # game variables
         self.running = False
-        self.debug = False
+        self.debug = debug
 
         self.stop_threshold = 1.0
         self.stop_time = time.time()
@@ -141,6 +142,27 @@ class ModuloGame():
                          (int(pos[0]), int(pos[1])),
                          (int(end_x), int(end_y)), 4)
         
+    def _draw_mask(self):
+        pos = np.array([self.window_size, 
+                        self.window_size]) / 2
+        heading = math.degrees(self.agent.ori)
+        
+        mask = pygame.Surface((self.window_size, self.window_size), pygame.SRCALPHA)
+        mask.fill((0, 0, 0, 255))  # non-transparent mask
+
+        # Draw half circle mask
+        half_circle_radius = self.mask_radius
+        num_points = 50  # Number of points to approximate the half circle
+        points = [(pos[0], pos[1])]
+        for i in range(num_points + 1):
+            angle = math.radians(heading - 90 + 180 * (i / num_points))
+            x = pos[0] + half_circle_radius * math.cos(angle)
+            y = pos[1] - half_circle_radius * math.sin(angle)
+            points.append((x, y))
+
+        pygame.draw.polygon(mask, (0, 0, 0, 0), points)
+        self.screen.blit(mask, (0, 0))
+        
     def _convert_to_screen(self, loc):
         loc = np.copy(loc) / self.ref_size * self.screen_size
         loc[1] = self.screen_size - loc[1]
@@ -192,6 +214,7 @@ class ModuloGame():
             self.screen.fill(self.white)
             self._draw_arena()
             self._draw_mouse()
+            self._draw_mask()
 
             # Sound mechanism
             self._check_stop()
