@@ -1,6 +1,9 @@
 from model.game import ModuloGame
 import argparse
 
+# run Modulo
+# example: python3 run_game.py --debug True
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--debug", type=bool, default=False)

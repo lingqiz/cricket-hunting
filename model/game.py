@@ -36,7 +36,7 @@ class ModuloGame():
         self.target_color = (240, 122, 122)
         self.circle_color = (50, 150, 245)
         self.circle_radius = 30 / self.ref_size * self.screen_size
-        self.mask_radius = 2.0 * self.circle_radius        
+        self.mask_radius = 2.0 * self.circle_radius
         self.text_color = (50, 150, 245)
         self.font = pygame.font.SysFont(None, 18)
         self.score_font = pygame.font.SysFont(None, 24)
@@ -45,6 +45,7 @@ class ModuloGame():
         # game variables
         self.running = False
         self.debug = debug
+        self.mask = True
 
         self.stop_threshold = 1.0
         self.stop_time = time.time()
@@ -63,6 +64,10 @@ class ModuloGame():
         for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
+
+                if event.type == pygame.KEYDOWN \
+                    and event.key == pygame.K_v:
+                    self.mask = not self.mask
 
         # Key press handling
         keys = pygame.key.get_pressed()
@@ -114,9 +119,9 @@ class ModuloGame():
         score_text = self.score_font.render(f'Capture: {score}', True, self.text_color)
         self.screen.blit(score_text, (self.window_size - 100, 10))
 
-    def _draw_mouse(self):        
+    def _draw_mouse(self):
         # center of the viewport
-        pos = np.array([self.window_size, 
+        pos = np.array([self.window_size,
                         self.window_size]) / 2
 
         # flip orientation along y-axis
@@ -132,12 +137,15 @@ class ModuloGame():
         pygame.draw.line(self.screen, self.circle_color,
                          (int(pos[0]), int(pos[1])),
                          (int(end_x), int(end_y)), 4)
-        
+
     def _draw_mask(self):
-        pos = np.array([self.window_size, 
+        if not self.mask:
+            return
+
+        pos = np.array([self.window_size,
                         self.window_size]) / 2
         heading = math.degrees(self.agent.ori)
-        
+
         mask = pygame.Surface((self.window_size, self.window_size), pygame.SRCALPHA)
         mask.fill((0, 0, 0, 255))  # non-transparent mask
 
@@ -153,7 +161,7 @@ class ModuloGame():
 
         pygame.draw.polygon(mask, (0, 0, 0, 0), points)
         self.screen.blit(mask, (0, 0))
-        
+
     def _convert_to_screen(self, loc):
         loc = np.copy(loc) / self.ref_size * self.screen_size
         loc[1] = self.screen_size - loc[1]
@@ -162,7 +170,7 @@ class ModuloGame():
     def _draw_hex(self, center, scr_origin):
         # coordinates are flipped for screen display
         center = self._convert_to_screen(center)
-        
+
         # Calculate the vertices of the hexagon
         vertices = [
             (
@@ -174,24 +182,24 @@ class ModuloGame():
         # Draw the hexagon
         pygame.draw.polygon(self.screen, (255, 255, 255), vertices, 0)  # Fill with white
         pygame.draw.polygon(self.screen, (76, 181, 5), vertices, 2)  # Green border
-        
+
     def _draw_target(self, center, scr_origin):
         # convert coordinates
         center = self._convert_to_screen(center) - scr_origin
-        
+
         # draw target
-        pygame.draw.circle(self.screen, self.target_color, center, 10)        
+        pygame.draw.circle(self.screen, self.target_color, center, 10)
 
     def _draw_arena(self):
         # compute view port coordinate origin
         # flip y-axis for screen coordinates
-        mouse_loc = self._convert_to_screen(self.agent.loc)        
-        scr_orign = mouse_loc - np.array([self.window_size, 
+        mouse_loc = self._convert_to_screen(self.agent.loc)
+        scr_orign = mouse_loc - np.array([self.window_size,
                                           self.window_size]).reshape([2, -1]) / 2
-                
+
         for i in range(self.arena.n_tiles):
             self._draw_hex(self.arena.tiles[:, i], scr_orign.squeeze())
-            
+
         for i in range(self.arena.n_target):
             self._draw_target(self.arena.target[:, i], scr_orign.squeeze())
 
@@ -208,7 +216,7 @@ class ModuloGame():
             self._draw_mask()
 
             # Sound mechanism
-            self._check_stop()            
+            self._check_stop()
 
             # Draw text
             self._score_text()
