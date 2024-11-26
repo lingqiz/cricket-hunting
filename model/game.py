@@ -15,8 +15,6 @@ class ModuloGame():
         self.arena = Modulo()
         self.agent = GameAgent(self.arena)
 
-        # init visual
-
         # init sound
         pygame.mixer.init()
         file_path = os.path.join(PKG_ROOT, 'chirp.wav')
@@ -35,6 +33,7 @@ class ModuloGame():
         self.ref_size = 2300
         self.white = (255, 255, 255)
         self.black = (0, 0, 0)
+        self.target_color = (240, 122, 122)
         self.circle_color = (50, 150, 245)
         self.circle_radius = 30 / self.ref_size * self.screen_size
         self.text_color = (50, 150, 245)
@@ -141,12 +140,16 @@ class ModuloGame():
         pygame.draw.line(self.screen, self.circle_color,
                          (int(pos[0]), int(pos[1])),
                          (int(end_x), int(end_y)), 4)
+        
+    def _convert_to_screen(self, loc):
+        loc = np.copy(loc) / self.ref_size * self.screen_size
+        loc[1] = self.screen_size - loc[1]
+        return loc
 
     def _draw_hex(self, center, scr_origin):
         # coordinates are flipped for screen display
-        center = np.copy(center) / self.ref_size * self.screen_size
-        center[1] = self.screen_size - center[1]
-
+        center = self._convert_to_screen(center)
+        
         # Calculate the vertices of the hexagon
         vertices = [
             (
@@ -158,17 +161,26 @@ class ModuloGame():
         # Draw the hexagon
         pygame.draw.polygon(self.screen, (255, 255, 255), vertices, 0)  # Fill with white
         pygame.draw.polygon(self.screen, (76, 181, 5), vertices, 2)  # Green border
+        
+    def _draw_target(self, center, scr_origin):
+        # convert coordinates
+        center = self._convert_to_screen(center) - scr_origin
+        
+        # draw target
+        pygame.draw.circle(self.screen, self.target_color, center, 10)        
 
     def _draw_arena(self):
         # compute view port coordinate origin
         # flip y-axis for screen coordinates
-        mouse_loc = np.copy(self.agent.loc) / self.ref_size * self.screen_size
-        mouse_loc[1] = self.screen_size - mouse_loc[1]        
+        mouse_loc = self._convert_to_screen(self.agent.loc)        
         scr_orign = mouse_loc - np.array([self.window_size, 
                                           self.window_size]).reshape([2, -1]) / 2
                 
         for i in range(self.arena.n_tiles):
             self._draw_hex(self.arena.tiles[:, i], scr_orign.squeeze())
+            
+        for i in range(self.arena.n_target):
+            self._draw_target(self.arena.target[:, i], scr_orign.squeeze())
 
     def run_game(self):
         self.running = True

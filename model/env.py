@@ -25,16 +25,17 @@ class Modulo(ArenaMap):
         # ref distance (mm)
         self.dr = 100
         
-    def _init_target(self, n=16, stratified=True):
+    def _init_target(self, n_target=16, stratified=True):
+        self.n_target = n_target
         # n_tiles choose n
         if stratified:
-            n_split = np.floor(self.n_tiles / n).astype(int)
+            n_split = np.floor(self.n_tiles / n_target).astype(int)
             self.target_idx = np.concatenate([np.random.choice(range(i * n_split, (i + 1) * n_split),
-                                                               1, replace=False) for i in range(n)])
+                                                        1, replace=False) for i in range(n_target)])
             np.random.shuffle(self.target_idx)
 
         else:
-            self.target_idx = np.random.choice(self.n_tiles, n, replace=False)
+            self.target_idx = np.random.choice(self.n_tiles, n_target, replace=False)
 
         # target coordinates
         self.target = self.tiles[:, self.target_idx]
