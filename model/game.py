@@ -35,6 +35,7 @@ class ModuloGame():
         self.black = (0, 0, 0)
         self.target_color = (240, 122, 122)
         self.circle_color = (50, 150, 245)
+        self.tile_color = (76, 181, 5)
         self.circle_radius = 30 / self.ref_size * self.screen_size
         self.mask_radius = 2.0 * self.circle_radius
         self.text_color = (50, 150, 245)
@@ -180,8 +181,8 @@ class ModuloGame():
             for i in range(6)]
 
         # Draw the hexagon
-        pygame.draw.polygon(self.screen, (255, 255, 255), vertices, 0)  # Fill with white
-        pygame.draw.polygon(self.screen, (76, 181, 5), vertices, 2)  # Green border
+        pygame.draw.polygon(self.screen, self.white, vertices, 0)  # Fill with white
+        pygame.draw.polygon(self.screen, self.tile_color, vertices, 2)  # Green border
 
     def _draw_target(self, center, scr_origin):
         # convert coordinates
@@ -189,6 +190,14 @@ class ModuloGame():
 
         # draw target
         pygame.draw.circle(self.screen, self.target_color, center, 10)
+
+    def _draw_border(self, scr_origin):
+        vertices = []
+        for i in range(6):
+            vertice = self._convert_to_screen(self.arena.vert_bound[:, i]) - scr_origin
+            vertices.append((vertice[0], vertice[1]))
+
+        pygame.draw.polygon(self.screen, self.tile_color, vertices, 2)
 
     def _draw_arena(self):
         # compute view port coordinate origin
@@ -202,6 +211,8 @@ class ModuloGame():
 
         for i in range(self.arena.n_target):
             self._draw_target(self.arena.target[:, i], scr_orign.squeeze())
+
+        self._draw_border(scr_orign.squeeze())
 
     def run_game(self):
         self.running = True

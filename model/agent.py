@@ -29,6 +29,6 @@ class GameAgent(Agent):
         new_x = self.loc[0] + self.velocity * np.cos(self.ori)
         new_y = self.loc[1] + self.velocity * np.sin(self.ori)
 
-        # TODO: add boundary check
-
-        self.loc = np.array([new_x, new_y]).reshape([2, -1])
+        new_loc = np.array([new_x, new_y]).reshape([2, -1])
+        if self.arena.check_boundary(new_loc):
+            self.loc = new_loc

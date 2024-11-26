@@ -34,8 +34,8 @@ class ArenaMap():
         # boundary defined by hyperplane n @ v <= b
         n_bounds = 6 # hexagon
         shift = 80
-        self.A = np.zeros ([2, n_bounds])
-        self.b = np.zeros(n_bounds)
+        self.A = np.zeros([2, n_bounds])
+        self.b = np.zeros([n_bounds, 1])
         for idx in range(n_bounds):
             # vertices
             v1 = self.tiles[:, self.vert_tile[idx]]
@@ -56,10 +56,10 @@ class ArenaMap():
         self.vert_bound = np.zeros([2, n_bounds])
         for idx in range(n_bounds):
             n1 = self.A[:, idx]
-            b1 = self.b[idx]
+            b1 = self.b[idx].squeeze()
 
             n2 = self.A[:, (idx + 1) % n_bounds]
-            b2 = self.b[(idx + 1) % n_bounds]
+            b2 = self.b[(idx + 1) % n_bounds].squeeze()
 
             # intersection
             x = np.linalg.solve(np.array([n1, n2]), -np.array([b1, b2]))
@@ -67,7 +67,7 @@ class ArenaMap():
 
     def check_boundary(self, pos):
         # check if the position is within the boundary
-        return np.all(self.A.T @ pos <= self.b)
+        return np.all(self.A.T @ pos + self.b <= 0)
 
     def _draw_hex(self, plot_ax, center, alpha=1,
                   label=False, index=None):
