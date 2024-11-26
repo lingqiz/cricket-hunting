@@ -6,13 +6,17 @@ class Modulo(ArenaMap):
     def __init__(self):
         super().__init__()
 
-        # arena information
+        # arena information (override with CCF)
+        # TODO: switch to CCF for all calculations
         self.tile_center = ccf_map()
         # tile coordinates [2, N]
         self.tiles = np.array([self.tile_center[0],
                                self.tile_center[1]])
         self.n_tiles = self.tiles.shape[1]
         self.arena_center = None
+
+        # recompute boundary information
+        self._init_boundary()
 
         self._init_target()
         self.current = self.target[:, self.target_count].reshape([2, -1])
@@ -24,7 +28,7 @@ class Modulo(ArenaMap):
         self.noise = 5
         # ref distance (mm)
         self.dr = 100
-        
+
     def _init_target(self, n_target=16, stratified=True):
         self.n_target = n_target
         # n_tiles choose n
@@ -43,7 +47,7 @@ class Modulo(ArenaMap):
 
     def sample_tile(self):
         return self.tiles[:, np.random.choice(self.n_tiles, 1, replace=False)]
-    
+
     def get_tile(self, index):
         return self.tiles[:, index].reshape([2, -1])
 
@@ -56,7 +60,7 @@ class Modulo(ArenaMap):
         if dist <= TRIG_RADIUS:
             self.capture()
             return True
-        
+
         return False
 
     def capture(self):
@@ -79,13 +83,13 @@ class Modulo(ArenaMap):
 
         if dist == -1:
             dist = self.distance(pos)
-        
+
         return self.base - self.bg - 20 * np.log10((dist + 10) / self.dr)
-    
+
     def sound_volume(self, dist=-1, pos=None):
         '''
         Calculate sound volume (for demo, not calibrated)
-        '''        
+        '''
         if dist == -1:
             dist = self.distance(pos)
 

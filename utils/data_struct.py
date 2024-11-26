@@ -5,7 +5,7 @@ import os
 from scipy.signal import butter, filtfilt
 
 from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI_FRAME, TRK_CTR, \
-    TILE_CENTER, TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, TRIG_RADIUS
+    TILE_CENTER, TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, VERT_TILE, TRIG_RADIUS
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -17,10 +17,60 @@ matplotlib.rcParams["image.origin"] = "lower"
 class ArenaMap():
 
     def __init__(self):
+        # tile coordinates [2, N]
         self.tile_center = TILE_CENTER
+        self.tiles = np.array([self.tile_center[0],
+                               self.tile_center[1]])
+
         self.arena_center = ARENA_CENTER
 
-    def _draw_hex(self, plot_ax, center, alpha=1):
+        # index of tiles that define the vertices of the arena
+        self.vert_tile = np.array(VERT_TILE)
+
+        # compute boundary information
+        self._init_boundary()
+
+    def _init_boundary(self):
+        # boundary defined by hyperplane n @ v <= b
+        n_bounds = 6 # hexagon
+        shift = 80
+        self.A = np.zeros ([2, n_bounds])
+        self.b = np.zeros(n_bounds)
+        for idx in range(n_bounds):
+            # vertices
+            v1 = self.tiles[:, self.vert_tile[idx]]
+            v2 = self.tiles[:, self.vert_tile[(idx + 1) % n_bounds]]
+
+            # normal vector
+            n = (v2 - v1) / np.linalg.norm(v2 - v1)
+            # rotate n by 90 degrees counter-clockwise
+            n = np.array([-n[1], n[0]])
+
+            # n @ v = b
+            b = - np.dot(n, v1) - shift
+
+            self.A[:, idx] = n
+            self.b[idx] = b
+
+        # compute boundary vertices using intersection
+        self.vert_bound = np.zeros([2, n_bounds])
+        for idx in range(n_bounds):
+            n1 = self.A[:, idx]
+            b1 = self.b[idx]
+
+            n2 = self.A[:, (idx + 1) % n_bounds]
+            b2 = self.b[(idx + 1) % n_bounds]
+
+            # intersection
+            x = np.linalg.solve(np.array([n1, n2]), -np.array([b1, b2]))
+            self.vert_bound[:, idx] = x
+
+    def check_boundary(self, pos):
+        # check if the position is within the boundary
+        return np.all(self.A.T @ pos <= self.b)
+
+    def _draw_hex(self, plot_ax, center, alpha=1,
+                  label=False, index=None):
         plot_ax.add_patch(patches.RegularPolygon(
             center, numVertices=6,
             radius=TILE_RAD_MM,
@@ -28,10 +78,24 @@ class ArenaMap():
             facecolor='w', edgecolor='g',
             lw=1, alpha=alpha))
 
-    def draw_arena(self, plot_ax, alpha=1):
+        # write index on the tile
+        if label:
+            plot_ax.text(center[0], center[1], str(index),
+                         fontsize=8, ha='center', va='center')
+
+    def draw_arena(self, plot_ax, alpha=1, label=False):
         for idx in range(len(self.tile_center[0])):
             self._draw_hex(plot_ax, (self.tile_center[0][idx],
-                                     self.tile_center[1][idx]), alpha)
+                                     self.tile_center[1][idx]),
+                                     alpha, label, index=idx)
+
+    def draw_boundary(self, plot_ax):
+        # draw a hexagon boundary using the vertices in vert_bound
+        n_bounds = 6 # hexagon
+        for idx in range(n_bounds):
+            v1 = self.vert_bound[:, idx]
+            v2 = self.vert_bound[:, (idx + 1) % n_bounds]
+            plot_ax.plot([v1[0], v2[0]], [v1[1], v2[1]], 'r--')
 
     def draw_target(self, plot_ax, alpha=0.5, draw_hex=False):
         if draw_hex:

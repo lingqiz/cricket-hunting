@@ -70,6 +70,10 @@ def ccf_map():
 TILE_CENTER = arena_map()
 ARENA_CENTER = (1140, 1200)
 
+# tile index that defines the vertices of the arena
+# in counter-clockwise order
+VERT_TILE = [0, 34, 134, 156, 122, 22]
+
 # Organize files for different mice cohorts
 video_base = os.path.join(DIR_HOME,
             'Desktop/dennislab/data/rig')
