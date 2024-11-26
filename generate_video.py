@@ -5,9 +5,10 @@ from utils.data_loader import *
 from utils.data_struct import *
 
 # read in name and session number from command line
-# example: python3 generate_video.py p16 12 39 40
+# example: python3 generate_video.py p16 -1 12 39 40
 name = sys.argv[1]
-sess = [int(s) for s in sys.argv[2:]]
+eos = int(sys.argv[2]) == 1
+sess = [int(s) for s in sys.argv[3:]]
 
 all_files = ALL_MICE[name]
 all_data = []
@@ -27,4 +28,4 @@ for ses_idx in sess:
     # generate video for the session
     # set eos to True to include the end of session
     print('gennrating video for session', ses_idx)
-    data.all_video(max_frame=64800, eos=False)
+    data.all_video(max_frame=64800, eos=eos)

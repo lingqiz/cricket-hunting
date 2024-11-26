@@ -292,6 +292,7 @@ class DataPlot():
         # LEFT PLOT
         # TODO: correct tiles coordinates using CCF
         # ses_obj.draw_arena(axs[0])
+        ses_obj.draw_boundary(self.axs[0])
         self.target_xy = ses_obj.target
         self.targets = ses_obj.draw_target(self.axs[0], draw_hex=True)
 
