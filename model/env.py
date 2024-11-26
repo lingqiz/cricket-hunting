@@ -81,7 +81,7 @@ class Modulo(ArenaMap):
         '''
         # add 10 mm to distance to avoid log(0)
 
-        if dist == -1:
+        if np.any(dist == -1):
             dist = self.distance(pos)
 
         return self.base - self.bg - 20 * np.log10((dist + 10) / self.dr)
@@ -90,7 +90,7 @@ class Modulo(ArenaMap):
         '''
         Calculate sound volume (for demo, not calibrated)
         '''
-        if dist == -1:
+        if np.any(dist == -1):
             dist = self.distance(pos)
 
         return np.clip(self.dr / dist, 0, 1)
