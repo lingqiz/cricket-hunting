@@ -3,7 +3,8 @@ import numpy as np
 class Agent():
     def __init__(self, arena):
         self.arena = arena
-        self.loc = arena.sample_tile().reshape([2, -1])
+        self.loc = arena.sample_tile().reshape([2, -1]) + \
+                    np.random.random([2, 1]) * 50.0
         self.ori = np.random.random() * 2.0 * np.pi
 
     def get_loc(self):
@@ -14,7 +15,7 @@ class GameAgent(Agent):
         super().__init__(arena)
 
         self.ang_veloc = 2.5 / 180.0 * np.pi
-        self.velocity = 10
+        self.velocity = 5.0
 
     def turn_left(self):
         self.ori += self.ang_veloc

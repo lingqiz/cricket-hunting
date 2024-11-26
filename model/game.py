@@ -24,7 +24,7 @@ class ModuloGame():
         # init game
         pygame.init()
         self.screen_size = screen_size
-        self.window_size = screen_size * 0.175
+        self.window_size = screen_size * 0.15
         self.screen = pygame.display.set_mode((self.window_size,
                                                self.window_size))
         pygame.display.set_caption("Modulo")
@@ -36,7 +36,7 @@ class ModuloGame():
         self.target_color = (240, 122, 122)
         self.circle_color = (50, 150, 245)
         self.circle_radius = 30 / self.ref_size * self.screen_size
-        self.mask_radius = 3.0 * self.circle_radius        
+        self.mask_radius = 2.0 * self.circle_radius        
         self.text_color = (50, 150, 245)
         self.font = pygame.font.SysFont(None, 18)
         self.score_font = pygame.font.SysFont(None, 24)
@@ -95,15 +95,6 @@ class ModuloGame():
 
                 # reset timer plus 1 second ISI
                 self.stop_time = time.time() + 1.0
-
-    def _sound(self):
-        stop_duration = time.time() - self.stop_time
-        if stop_duration > self.stop_threshold:
-            self.set_volume()
-            self.play_sound()
-
-            # reset timer plus 1 second ISI
-            self.stop_time = time.time() + 1.0
 
     def _debug_text(self):
         hd = np.rad2deg(self.agent.ori)
@@ -217,8 +208,7 @@ class ModuloGame():
             self._draw_mask()
 
             # Sound mechanism
-            self._check_stop()
-            self._sound()
+            self._check_stop()            
 
             # Draw text
             self._score_text()
