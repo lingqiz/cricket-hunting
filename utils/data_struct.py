@@ -400,7 +400,7 @@ class DataPlot():
         # init plotting
         self._init_plot(ses_obj, trial_obj)
         self._init_vars()
-        self.pbar = tqdm.tqdm(total=self.n_frame + 1, position=0, leave=True)
+        self.pbar = tqdm.tqdm(total=self.n_frame, position=0, leave=True)
 
         # create video
         self.save_video(ses_obj, trial_idx)
@@ -410,7 +410,7 @@ class DataPlot():
         # index shifted animation function
         def animate_shifted(i): return self.animate(ses_obj, i + self.start_idx)
         ani = animation.FuncAnimation(self.fig, animate_shifted,
-                                      frames=self.n_frame,
+                                      frames=self.n_frame - 1,
                                       interval=10)
 
         # video path
