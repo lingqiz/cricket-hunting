@@ -1,4 +1,4 @@
-# Model and Analysis of Mouse Hunting in Modulo Arena
+# Model and Analysis of Mouse Behavior in Modulo Arena
 
 ### Dependency
 PRFS path
