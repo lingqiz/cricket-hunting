@@ -1,14 +1,26 @@
 import pandas as pd
 import numpy as np
-import sys
+import sys, argparse
 from utils.data_loader import *
 from utils.data_struct import *
 
-# read in name and session number from command line
-# example: python3 generate_video.py p16 -1 12 39 40
-name = sys.argv[1]
-eos = int(sys.argv[2]) == 1
-sess = [int(s) for s in sys.argv[3:]]
+'''
+This script generates video from session(s) of a mouse hunting.
+Example usage:
+python3 generate_video.py --name p16 --eos True --sess 0 1 2
+python3 generate_video.py --name p20 --sess 10 11
+'''
+
+# setup argument parser
+parser = argparse.ArgumentParser()
+
+parser.add_argument("--name", type=str)
+parser.add_argument("--eos", type=bool, default=False)
+parser.add_argument("--session", nargs='+', type=int)
+
+# read in arguments
+args = parser.parse_args()
+name, eos, sess = (args.name, args.eos, args.session)
 
 all_files = ALL_MICE[name]
 all_data = []
