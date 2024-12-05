@@ -15,8 +15,8 @@ TRK_CTR = 948
 TRIG_RADIUS_ZABER = 5500
 TRIG_RADIUS = TRIG_RADIUS_ZABER * ZABER_TO_MM
 
-# 30 sec ISI ~= 535 frames
-ISI_FRAME = 500
+# 30 sec ISI
+ISI = 30
 
 def tile_angle():
     '''

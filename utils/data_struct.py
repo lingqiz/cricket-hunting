@@ -4,7 +4,7 @@ import tqdm
 import os
 from scipy.signal import butter, filtfilt
 
-from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI_FRAME, TRK_CTR, \
+from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI, TRK_CTR, \
     TILE_CENTER, TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, VERT_TILE, TRIG_RADIUS
 
 import matplotlib
@@ -141,6 +141,7 @@ class SessionData(ArenaMap):
         # time
         self.time = df['relative_time'].to_numpy()
         self.frame = df['frame_no'].to_numpy().astype(int)
+        self.frame_rate = self.frame[-1] / self.time[-1]
 
         # chirp
         self.chirped = self._int_array(df['chirped'].to_numpy())
@@ -213,10 +214,13 @@ class SessionData(ArenaMap):
 
         return cv2.resize(frame, dsize=None, fx=0.5, fy=0.5)
 
-    # note that average frame rate * 30 sec ISI ~= 535 frames
-    def _trial_index(self, trial_idx, prepend=ISI_FRAME, append=0, eos=False):
+    # 30 sec ISI * average frame rate
+    def _trial_index(self, trial_idx, prepend=None, append=0, eos=False):
         trigger_time = np.where(self.triggered == 1)[0]
         session_length = self.time.shape[0]
+
+        if prepend is None:
+            prepend = int(self.frame_rate * ISI)
 
         # if no cricket catch
         if len(trigger_time) == 0:
@@ -241,9 +245,10 @@ class SessionData(ArenaMap):
 
         return start_idx, n_frame
 
-    # append 550 frames (~ ISI time) to the end of the trial for visualization
+    # 30 sec ISI * average frame rate
     def _frame_index(self, trial_idx, eos=False):
-        return self._trial_index(trial_idx, append=550, eos=eos)
+        append = int(self.frame_rate * ISI)
+        return self._trial_index(trial_idx, append=append, eos=eos)
 
     def all_video(self, max_frame=16500, eos=False):
         n_trigger = np.where(self.triggered == 1)[0].shape[0]
