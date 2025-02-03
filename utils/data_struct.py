@@ -3,6 +3,7 @@ import numpy as np
 import tqdm
 import os
 import warnings
+import scipy.io
 from scipy.signal import butter, filtfilt
 
 from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI, TRK_CTR, \
@@ -160,6 +161,8 @@ class SessionData(ArenaMap):
             self.video = cv2.VideoCapture(video_path)
 
         # hs video and tracking
+        # note pose data is not loaded by default
+        # call _load_pose() to load tracking data
         self.hs_path = hs_path
         self.track_path = hs_path[:-4] + '.mat'
         self.calib_path = hs_path[:-4] + '_calib.csv'
@@ -179,6 +182,29 @@ class SessionData(ArenaMap):
 
         self.x = filtfilt(b, a, self.x)
         self.y = filtfilt(b, a, self.y)
+
+    def _load_pose(self):
+        if not os.path.exists(self.track_path):
+            self.pose = None
+            return
+
+        # load tracking data
+        tracking = scipy.io.loadmat(self.track_path)
+
+        points = tracking['points']
+        points = points.reshape([-1, points.shape[-1]])
+        self.track_conf = tracking['conf']
+
+        # sampling rate ~= 120 Hz
+        # cutoff frequency = 10 Hz
+        fs = 120
+        nyquist = 0.5 * fs
+        cutoff = 10
+
+        b, a = butter(N=2, Wn=cutoff/nyquist,
+                      btype='low', analog=False)
+
+        self.pose = filtfilt(b, a, points, axis=-1)
 
     def to_trials(self, non_catch=False):
         if self.n_catch == 0:
