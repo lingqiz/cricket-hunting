@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import tqdm
 import os
+import warnings
 from scipy.signal import butter, filtfilt
 
 from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI, TRK_CTR, \
@@ -458,7 +459,7 @@ class TrialData(ArenaMap):
         # number of chirp locations should be 2 or 3
         # (last, current, and next)
         if len(chirp_loc) < 2 or len(chirp_loc) > 3:
-            raise Warning("chrip location is %d" % len(chirp_loc))
+            warnings.warn("Chrip location is %d" % len(chirp_loc))
 
         # x, y data
         self.x = x
