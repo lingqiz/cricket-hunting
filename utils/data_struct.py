@@ -116,7 +116,7 @@ class ArenaMap():
 
 class SessionData(ArenaMap):
 
-    def __init__(self, name, ses, df, video_path):
+    def __init__(self, name, ses, df, video_path, hs_path):
         super().__init__()
 
         # name and session
@@ -158,6 +158,11 @@ class SessionData(ArenaMap):
             self.video = cv2.VideoCapture(corrected_path)
         else:
             self.video = cv2.VideoCapture(video_path)
+
+        # hs video and tracking
+        self.hs_path = hs_path
+        self.track_path = hs_path[:-4] + '.mat'
+        self.calib_path = hs_path[:-4] + '_calib.csv'
 
         # cricket catch
         self.n_catch = np.sum(self.triggered)

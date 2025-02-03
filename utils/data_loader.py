@@ -74,13 +74,15 @@ ARENA_CENTER = (1140, 1200)
 # in counter-clockwise order
 VERT_TILE = [0, 34, 134, 156, 122, 22]
 
-# Organize files for different mice cohorts
-video_base = os.path.join(DIR_HOME,
-            'Desktop/dennislab/data/rig')
+# base directories for videos
+video_base = '/groups/dennis/dennislab/data/rig'
+track_base = '/groups/dennis/dennislab/data/hs_cam'
+hs_video = [x for x in os.listdir(track_base) if x.endswith('.mp4')]
 
-def time_diff(time1, time2):
+# Organize files for different mice cohorts
+def time_diff(time1, time2, format="%H_%M_%S"):
     # Convert time strings to datetime.time objects
-    t1 = datetime.strptime(time1, "%H_%M_%S").time()
+    t1 = datetime.strptime(time1, format).time()
     t2 = datetime.strptime(time2, "%H_%M_%S").time()
 
     # Convert time objects to seconds since midnight
@@ -104,15 +106,25 @@ def load_data(dict, base_dir):
         # find the folder with the same date
         rig_folder = os.path.join(video_base, date_str.replace('-', ''))
 
-        # read all files in the folder with .avi extension
+        # find low-res video: read all files in the folder with .avi extension
         rig_files = os.listdir(rig_folder)
         video_files = [x for x in rig_files if x.startswith('video_basler_') and x.endswith('.avi')]
         video_time = [time_diff(x[-12:-4], time_str) for x in video_files]
         video_file = video_files[np.argmin(video_time)]
 
+        # find high-res video (for pose tracking)
+        videos = [x for x in hs_video if date_str.replace('-', '') in x]
+        video_time = [time_diff(x[9:15], time_str, format="%H%M%S") for x in videos]
+
+        if len(video_time) == 0:
+            hs_file = 'None'
+        else:
+            hs_file = videos[np.argmin(video_time)]
+
         # add file to list
         dict[mice_str].append((os.path.join(base_dir, fl),
-                               os.path.join(rig_folder, video_file)))
+                               os.path.join(rig_folder, video_file),
+                               os.path.join(track_base, hs_file)))
 
 # b12b13 (2023 Fall)
 B_MICE = {'b12': [], 'b13': []}
