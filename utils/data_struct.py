@@ -191,6 +191,7 @@ class SessionData(ArenaMap):
         # load tracking data
         tracking = scipy.io.loadmat(self.track_path)
 
+        # (n_points, (x, y), n_frame)
         points = tracking['points']
         points = points.reshape([-1, points.shape[-1]])
         self.track_conf = tracking['conf']
