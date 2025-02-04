@@ -12,7 +12,7 @@ for i in range(num_points):
     r, g, b, _ = cmap(i / (num_points - 1))
     colors.append((b * 255, g * 255, r * 255))
 
-
+# draw tracking points
 def draw_cross(frame, points, size=4, thickness=2):
     """
     Draw a `+` cross marker at each point instead of a circle.
@@ -35,6 +35,7 @@ def draw_cross(frame, points, size=4, thickness=2):
 
     return frame
 
+# video playback
 def video_player(video_path, pose_data):
     cap = cv2.VideoCapture(video_path)
 
@@ -44,6 +45,8 @@ def video_player(video_path, pose_data):
 
     frame_idx = 0
     paused = False
+    delay = int(1/120 * 1000)
+    text_color = (62, 176, 69)
 
     while True:
         if not paused:
@@ -56,12 +59,17 @@ def video_player(video_path, pose_data):
             points = pose_data[:, frame_idx].reshape(-1, 2)
             draw_cross(frame, points)
 
+            # Write frame number and playback speed on the frame
+            frame_text = f"Frame: {frame_idx}"
+            speed_text = f"Speed: {1 / (delay / 1000):.2f} FPS"
+            cv2.putText(frame, frame_text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+            cv2.putText(frame, speed_text, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+
             # Display the frame
             cv2.imshow('Pose Tracking', frame)
             frame_idx += 1
 
         # Keyboard controls
-        delay = int(1/120 * 1000)
         key = cv2.waitKey(delay)  # Delay in milliseconds (adjust based on FPS)
 
         if key == ord('q'):
@@ -74,11 +82,16 @@ def video_player(video_path, pose_data):
         elif key == ord('a'):
             frame_idx -= 120
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+        elif key == ord('w'):
+            delay = delay // 2
+        elif key == ord('s'):
+            delay = delay * 2
 
     cap.release()
     cv2.destroyAllWindows()
 
 
+# Load session data and play video
 ses_id = 12
 session = MICE_HUNTING['p16']
 
