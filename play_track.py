@@ -76,12 +76,17 @@ def video_player(video_path, pose_data):
             break
         elif key == ord('p'):
             paused = not paused
+
         elif key == ord('d'):
             frame_idx += 120
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
         elif key == ord('a'):
             frame_idx -= 120
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+        elif key == ord('l'):
+            frame_idx += 120 * 60 # Skip 1 minute
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+
         elif key == ord('w'):
             delay = delay // 2
         elif key == ord('s'):
@@ -91,7 +96,7 @@ def video_player(video_path, pose_data):
     cv2.destroyAllWindows()
 
 
-# Load session data and play video
+# load session data and play video
 ses_id = 12
 session = MICE_HUNTING['p16']
 
