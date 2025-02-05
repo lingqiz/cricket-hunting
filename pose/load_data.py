@@ -1,6 +1,7 @@
 import json
 import os
 import numpy as np
+import scipy.io
 import matplotlib.pyplot as plt
 
 BASE_DIR = '/groups/zhang/home/zhangl5/Emily/Video_Process/training'
@@ -29,3 +30,15 @@ def load_coco(file_path):
 
     return images, points, np.array(occlude).T
 
+def load_pred(file_path):
+    '''Load APT output data'''
+    track_path = os.path.join(BASE_DIR, '.temp', file_path)
+    
+    # load tracking data
+    tracking = scipy.io.loadmat(track_path)
+
+    # (n_points, (x, y), n_frame)
+    points = tracking['points']
+    points = points.reshape([-1, points.shape[-1]])
+    
+    return points
