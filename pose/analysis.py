@@ -85,6 +85,10 @@ class Mouse(IntEnum):
     def right_ear(cls):
         return [cls.R_EAR_UO, cls.R_EAR_LO, cls.R_EAR_LI, cls.R_EAR_UI, cls.R_EAR_TIP, cls.R_EAR_BASE]
 
+    @classmethod
+    def tail(cls):
+        return [cls.TAIL_T, cls.TAIL_M, cls.TAIL_E]
+
 class AnimalPose():
     def __init__(self, pose):
         '''
