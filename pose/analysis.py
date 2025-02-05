@@ -1,5 +1,7 @@
 import numpy as np
 from enum import IntEnum
+from matplotlib import colormaps
+cmap = colormaps.get_cmap('Spectral')
 
 class Mouse(IntEnum):
     '''
@@ -51,6 +53,13 @@ class Mouse(IntEnum):
     RM_BODY = 35
     RL_BODY = 36
 
+    @classmethod
+    def colors(cls):
+        plot_colors = [cmap(i / (len(cls) - 1))
+                       for i in range(len(cls))]
+
+        return plot_colors
+
     # Define point groups
     @classmethod
     def nose(cls):
@@ -83,9 +92,65 @@ class AnimalPose():
         where k is the number of keypoints,
         and n is the number of frames.
         '''
-        self.pose = pose.copy()
-        self.xy = pose.reshape([-1, 2, pose.shape[-1]])
+        # 2D array
+        if len(pose.shape) == 2:
+            self.pose = pose.copy()
+            self.xy = self._to_xy(pose)
+
+        # 3D array
+        elif len(pose.shape) == 3:
+            self.xy = pose.copy()
+            self.pose = self._to_vector(pose)
+
+        else:
+            raise ValueError('Invalid shape of pose data')
+
+    def _to_xy(self, pose):
+        return pose.reshape([-1, 2, pose.shape[-1]])
+
+    def _to_vector(self, xy):
+        return xy.reshape([-1, xy.shape[-1]])
 
     def average_point(self, group):
         return np.mean(self.xy[group, :, :], axis=0)
 
+    def center(self, anchor_points=[Mouse.HEAD]):
+        '''
+        Center the pose data around the average of an anchor,
+        defined by center_points (default Mouse.HEAD).
+        '''
+        mouse_center = self.average_point(anchor_points)
+        centered = self.xy - mouse_center[np.newaxis, :, :]
+
+        return AnimalPose(centered)
+
+    def compute_angle(self, anchor_points):
+        '''
+        Compute the orientation of an anchor point
+        assuming the coordinates are centered
+        '''
+        anchor = self.average_point(anchor_points)
+        angle = np.arctan2(anchor[1, :], anchor[0, :])
+
+        return angle
+
+    def rotate(self, anchor_points=[Mouse.TAIL_BASE], target=-np.pi/2):
+        '''
+        Rotate the pose data so anchor points
+        are aligned with target angle (-y by default).
+        '''
+        angle = self.compute_angle(anchor_points)
+        theta = target - angle
+
+        # batch rotation matrix
+        # Create batched rotation matrices (2, 2, n_data)
+        cos_t = np.cos(theta)
+        sin_t = np.sin(theta)
+
+        rotations = np.array([
+            [cos_t, -sin_t],
+            [sin_t, cos_t]])
+
+        # apply rotation
+        rotated = np.einsum('idk, mdk -> mik', rotations, self.xy)
+        return AnimalPose(rotated)
