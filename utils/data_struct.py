@@ -194,13 +194,13 @@ class SessionData(ArenaMap):
         # (n_points, (x, y), n_frame)
         points = tracking['points']
         points = points.reshape([-1, points.shape[-1]])
-        self.track_conf = tracking['conf']
+        self.track_conf = tracking['conf'] - 1.0
 
         # sampling rate ~= 120 Hz
-        # cutoff frequency = 10 Hz
+        # cutoff frequency = 30 Hz
         fs = 120
         nyquist = 0.5 * fs
-        cutoff = 10
+        cutoff = 30
 
         b, a = butter(N=2, Wn=cutoff/nyquist,
                       btype='low', analog=False)

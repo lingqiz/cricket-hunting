@@ -13,7 +13,7 @@ for i in range(num_points):
     colors.append((b * 255, g * 255, r * 255))
 
 # draw tracking points
-def draw_cross(frame, points, size=4, thickness=2):
+def draw_cross(frame, points, conf, size=4, thickness=2):
     """
     Draw a `+` cross marker at each point instead of a circle.
 
@@ -26,17 +26,17 @@ def draw_cross(frame, points, size=4, thickness=2):
     """
     for i, (x, y) in enumerate(points):
         x, y = int(x), int(y)
+        if conf[i] >= 0.5:
+            # Draw horizontal line of the cross with alpha based on confidence
+            cv2.line(frame, (x - size, y), (x + size, y), colors[i], thickness)
 
-        # Draw horizontal line of the cross
-        cv2.line(frame, (x - size, y), (x + size, y), colors[i], thickness)
-
-        # Draw vertical line of the cross
-        cv2.line(frame, (x, y - size), (x, y + size), colors[i], thickness)
+            # Draw vertical line of the cross
+            cv2.line(frame, (x, y - size), (x, y + size), colors[i], thickness)
 
     return frame
 
 # video playback
-def video_player(video_path, pose_data):
+def video_player(video_path, pose_data, pose_conf):
     cap = cv2.VideoCapture(video_path)
 
     if not cap.isOpened():
@@ -57,7 +57,8 @@ def video_player(video_path, pose_data):
 
             # Draw pose on the frame
             points = pose_data[:, frame_idx].reshape(-1, 2)
-            draw_cross(frame, points)
+            conf = pose_conf[:, frame_idx]
+            frame = draw_cross(frame, points, conf)
 
             # Write frame number and playback speed on the frame
             frame_text = f"Frame: {frame_idx}"
@@ -105,4 +106,5 @@ session_data._load_pose()
 
 # play video
 video_player(session_data.hs_path,
-             session_data.pose)
+             session_data.pose,
+             session_data.track_conf)
