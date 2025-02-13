@@ -1,8 +1,12 @@
 import cv2
+import sys, os
 import numpy as np
+import scipy.io
 from matplotlib import colormaps
 from utils.curation import *
-load_data(['p16', 'p18'])
+load_data(['p16'])
+
+BASE_PATH = '/groups/dennis/dennislab/data/hs_cam'
 
 # set up color map
 num_points = 37
@@ -96,15 +100,30 @@ def video_player(video_path, pose_data, pose_conf):
     cap.release()
     cv2.destroyAllWindows()
 
+if len(sys.argv) > 1:
+    file_path = sys.argv[1]
+    video_path = os.path.join(BASE_PATH, file_path + '.mp4')
 
-# load session data and play video
-ses_id = 12
-session = MICE_HUNTING['p16']
+    # load tracking data
+    track_path = os.path.join(BASE_PATH, file_path + '.mat')
+    tracking = scipy.io.loadmat(track_path)
 
-session_data = session[ses_id]
-session_data._load_pose()
+    # (n_points, (x, y), n_frame)
+    points = tracking['points']
+    points = points.reshape([-1, points.shape[-1]])
+    track_conf = tracking['conf'] - 1.0
+
+else:
+    # load session data and play video
+    ses_id = 12
+    session = MICE_HUNTING['p16']
+
+    session_data = session[ses_id]
+    session_data._load_pose()
+
+    video_path = session_data.hs_path
+    points = session_data.pose
+    track_conf = session_data.track_conf
 
 # play video
-video_player(session_data.hs_path,
-             session_data.pose,
-             session_data.track_conf)
+video_player(video_path, points, track_conf)
