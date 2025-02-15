@@ -167,7 +167,7 @@ class SessionData(ArenaMap):
         # note pose data is not loaded by default
         # call _load_pose() to load tracking data
         self.hs_path = hs_path
-        self.hs = cv2.VideoCapture(hs_path + '.mp4')
+        self.hs = cv2.VideoCapture(hs_path)
 
         # calibration of hs camera
         self.calib_path = hs_path[:-4] + '_calib.csv'
@@ -299,8 +299,15 @@ class SessionData(ArenaMap):
         return cv2.resize(frame, dsize=None, fx=0.5, fy=0.5)
 
     def hs_frame(self, index):
-        # TODO
-        pass
+        hs_index = self.hs_index[index]
+
+        if hs_index < 0:
+            return None
+
+        self.hs.set(cv2.CAP_PROP_POS_FRAMES, hs_index)
+        _, frame = self.hs.read()
+
+        return frame
 
     # 30 sec ISI * average frame rate
     def _trial_index(self, trial_idx, prepend=None, append=0, eos=False):

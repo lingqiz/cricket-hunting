@@ -2,9 +2,9 @@ import cv2
 import sys, os
 import numpy as np
 import scipy.io
+import argparse
 from matplotlib import colormaps
 from utils.curation import *
-load_data(['p16'])
 
 BASE_PATH = '/groups/dennis/dennislab/data/hs_cam'
 
@@ -40,7 +40,7 @@ def draw_cross(frame, points, conf, size=4, thickness=2):
     return frame
 
 # video playback
-def video_player(video_path, pose_data, pose_conf):
+def hs_player(video_path, pose_data, pose_conf):
     cap = cv2.VideoCapture(video_path)
 
     if not cap.isOpened():
@@ -100,30 +100,102 @@ def video_player(video_path, pose_data, pose_conf):
     cap.release()
     cv2.destroyAllWindows()
 
-if len(sys.argv) > 1:
-    file_path = sys.argv[1]
-    video_path = os.path.join(BASE_PATH, file_path + '.mp4')
+def dual_player(session_data):
+    text_color = (62, 176, 69)
+    pose_data = session_data.keypoints
+    pose_conf = session_data.track_conf
 
-    # load tracking data
-    track_path = os.path.join(BASE_PATH, file_path + '.mat')
-    tracking = scipy.io.loadmat(track_path)
+    frame_idx = 0
+    ref_frame = session_data.get_frame(frame_idx)
 
-    # (n_points, (x, y), n_frame)
-    points = tracking['points']
-    points = points.reshape([-1, points.shape[-1]])
-    track_conf = tracking['conf'] - 1.0
+    separator_width = 10  # Adjust this for more/less separation
+    separator = np.full((ref_frame.shape[0], separator_width, 3),
+                        (128, 128, 128), dtype=np.uint8)
 
-else:
+    while True:
+        low_res = session_data.get_frame(frame_idx)
+        high_res = session_data.hs_frame(frame_idx)
+
+        if high_res is not None:
+            # Draw pose on the frame
+            pose_idx = session_data.hs_index[frame_idx]
+            points = pose_data[:, pose_idx].reshape(-1, 2)
+            conf = pose_conf[:, pose_idx]
+            high_res = draw_cross(high_res, points, conf)
+            high_res = cv2.resize(high_res, (low_res.shape[1], low_res.shape[0]))
+
+        else:
+            # Empty frame
+            high_res = np.zeros_like(low_res)
+
+        # Combine low-res and high-res frames side-by-side
+        low_res = cv2.flip(low_res, -1)
+        combined_frame = np.hstack((low_res, separator, high_res))
+
+        # Add text
+        frame_text = f"Frame: {frame_idx}"
+        time_text = f"Time: {session_data.time[frame_idx]:.2f} sec"
+        cv2.putText(combined_frame, frame_text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+        cv2.putText(combined_frame, time_text, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+
+        cv2.imshow('Pose Tracking', combined_frame)
+        # Next frame
+        frame_idx += 1
+
+        # Delay in milliseconds (adjust based on FPS)
+        key = cv2.waitKey(int((session_data.time[frame_idx + 1] -
+                          session_data.time[frame_idx]) * 1000 / 4))
+
+        if key == ord('q'):
+            break
+
+# Setup arguments
+parser = argparse.ArgumentParser(description='Play video tracking data')
+parser.add_argument('-mode', type=str, default='hs')
+parser.add_argument('-file_path', type=str, default=None)
+parser.add_argument('-animal', type=str, default=None)
+parser.add_argument('-session', type=int, default=None)
+
+args = parser.parse_args()
+
+if args.mode == 'hs':
+
+    if args.file_path is not None:
+        file_path = args.file_path
+        video_path = os.path.join(BASE_PATH, file_path + '.mp4')
+
+        # load tracking data
+        track_path = os.path.join(BASE_PATH, file_path + '.mat')
+        tracking = scipy.io.loadmat(track_path)
+
+        # (n_points, (x, y), n_frame)
+        points = tracking['points']
+        points = points.reshape([-1, points.shape[-1]])
+        track_conf = tracking['conf'] - 1.0
+
+    else:
+        load_data([args.animal])
+
+        # load session data and play video
+        session = MICE_HUNTING[args.animal]
+
+        session_data = session[args.session]
+        session_data._load_pose()
+
+        video_path = session_data.hs_path
+        points = session_data.keypoints
+        track_conf = session_data.track_conf
+
+    # play video
+    hs_player(video_path, points, track_conf)
+
+elif args.mode == 'dual':
+    load_data([args.animal])
+
     # load session data and play video
-    ses_id = 12
-    session = MICE_HUNTING['p16']
+    session = MICE_HUNTING[args.animal]
 
-    session_data = session[ses_id]
+    session_data = session[args.session]
     session_data._load_pose()
 
-    video_path = session_data.hs_path
-    points = session_data.keypoints
-    track_conf = session_data.track_conf
-
-# play video
-video_player(video_path, points, track_conf)
+    dual_player(session_data)
