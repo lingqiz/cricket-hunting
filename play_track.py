@@ -30,7 +30,7 @@ def draw_cross(frame, points, conf, size=4, thickness=2):
     """
     for i, (x, y) in enumerate(points):
         x, y = int(x), int(y)
-        if conf[i] >= 0.1:
+        if conf[i] >= 0.0:
             # Draw horizontal line of the cross with alpha based on confidence
             cv2.line(frame, (x - size, y), (x + size, y), colors[i], thickness)
 

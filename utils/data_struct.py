@@ -248,10 +248,10 @@ class SessionData(ArenaMap):
         self.track_conf = tracking['conf'] - 1.0
 
         # sampling rate ~= 120 Hz
-        # cutoff frequency = 30 Hz
+        # cutoff frequency = 15 Hz
         fs = 120
         nyquist = 0.5 * fs
-        cutoff = 30
+        cutoff = 15
 
         b, a = butter(N=2, Wn=cutoff/nyquist,
                       btype='low', analog=False)
