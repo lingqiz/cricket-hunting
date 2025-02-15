@@ -78,7 +78,7 @@ class ArenaMap():
             radius=TILE_RAD_MM,
             orientation=TILE_ANGLE,
             facecolor='w', edgecolor='g',
-            lw=1, alpha=alpha))
+            lw=2, alpha=alpha))
 
         # write index on the tile
         if label:
@@ -390,7 +390,6 @@ class DataPlot():
         self.fig, self.axs = plt.subplots(1, 2, figsize=(20, 10))
 
         # LEFT PLOT
-        # TODO: correct tiles coordinates using CCF
         # ses_obj.draw_arena(axs[0])
         ses_obj.draw_boundary(self.axs[0])
         self.target_xy = ses_obj.target
@@ -423,8 +422,8 @@ class DataPlot():
         self.ind_right.set_visible(False)
 
         # axis format
-        self.axs[0].set_xlim(0, 2400)
-        self.axs[0].set_ylim(0, 2400)
+        self.axs[0].set_xlim(-50, 2350)
+        self.axs[0].set_ylim(-150, 2250)
         self.axs[0].set_aspect('equal')
 
         self.axs[1].axis('off')
