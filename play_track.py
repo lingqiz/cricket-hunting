@@ -119,17 +119,14 @@ def dual_player(session_data):
             low_res = session_data.get_frame(frame_idx)
             high_res = session_data.hs_frame(frame_idx)
 
-            if high_res is not None:
+            if np.sum(high_res) > 0:
                 # Draw pose on the frame
                 pose_idx = session_data.hs_index[frame_idx]
                 points = pose_data[:, pose_idx].reshape(-1, 2)
                 conf = pose_conf[:, pose_idx]
                 high_res = draw_cross(high_res, points, conf)
-                high_res = cv2.resize(high_res, (low_res.shape[1], low_res.shape[0]))
 
-            else:
-                # Empty frame
-                high_res = np.zeros_like(low_res)
+            high_res = cv2.resize(high_res, (low_res.shape[1], low_res.shape[0]))
 
             # Combine low-res and high-res frames side-by-side
             low_res = cv2.flip(low_res, -1)

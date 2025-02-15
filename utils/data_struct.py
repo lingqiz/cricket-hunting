@@ -169,6 +169,11 @@ class SessionData(ArenaMap):
         self.hs_path = hs_path
         self.hs = cv2.VideoCapture(hs_path)
 
+        self.hs_length = int(self.hs.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.hs.set(cv2.CAP_PROP_POS_FRAMES, 1)
+        _, frame = self.hs.read()
+        self.hs_shape = frame.shape
+
         # calibration of hs camera
         self.calib_path = hs_path[:-4] + '_calib.csv'
         self._load_calib()
@@ -301,8 +306,8 @@ class SessionData(ArenaMap):
     def hs_frame(self, index):
         hs_index = self.hs_index[index]
 
-        if hs_index < 0:
-            return None
+        if hs_index < 0 or hs_index >= self.hs_length:
+            return np.zeros(self.hs_shape).astype(np.uint8)
 
         self.hs.set(cv2.CAP_PROP_POS_FRAMES, hs_index)
         _, frame = self.hs.read()
@@ -387,7 +392,7 @@ class DataPlot():
 
     def _init_plot(self, ses_obj, trial_obj):
         # create figure
-        self.fig, self.axs = plt.subplots(1, 2, figsize=(20, 10))
+        self.fig, self.axs = plt.subplots(1, 3, figsize=(30, 10))
 
         # LEFT PLOT
         # ses_obj.draw_arena(axs[0])
@@ -412,7 +417,7 @@ class DataPlot():
         # write information
         self.text = self.axs[0].text(20, 20, 'Chirps: 0, Tile Visit: 0', fontsize=12)
 
-        # RIGHT PLOT
+        # LOW RES VIDEO
         self.im = self.axs[1].imshow(ses_obj.get_frame(0), cmap='gray')
         self.axs[1].invert_xaxis()
 
@@ -420,6 +425,9 @@ class DataPlot():
         self.ind_right = self.axs[1].scatter(50, 50, s=625, marker='s',
                                              color='tab:blue', label='Chirp')
         self.ind_right.set_visible(False)
+
+        # HIGH RES VIDEO
+        self.im_hs = self.axs[2].imshow(ses_obj.hs_frame(0), cmap='gray')
 
         # axis format
         self.axs[0].set_xlim(-50, 2350)
