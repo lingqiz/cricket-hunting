@@ -10,7 +10,7 @@ def load_data(list_name):
         all_data = []
         for idx, file in enumerate(ALL_MICE[name]):
             data_frame = pd.read_csv(file[0], low_memory=False)
-            data = SessionData(name, idx, data_frame, file[1], file[2])
+            data = SessionData(name, idx, data_frame, *file[1:])
             all_data.append(data)
 
         # PWK mice

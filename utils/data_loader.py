@@ -1,19 +1,42 @@
 import numpy as np
 import pandas as pd
 import math, os
+import re
 from datetime import datetime
 
 import pathlib
 DIR_ROOT = pathlib.Path(__file__).parent.parent.resolve()
 DIR_HOME = pathlib.Path.home()
 
-# unit conversions
+# Unit Conversions
 ZEBER_TO_DLC = 1896 / 72248
 ZABER_TO_MM = 508 / 72248
 DLC_TO_MM = ZABER_TO_MM / ZEBER_TO_DLC
 TRK_CTR = 948
 TRIG_RADIUS_ZABER = 5500
 TRIG_RADIUS = TRIG_RADIUS_ZABER * ZABER_TO_MM
+
+# Tile Names
+TILE_NAMES = [
+    "A1",
+    "B1", "B2", "B3", "B4",
+    "C1", "C2", "C3", "C4", "C5", "C6", "C7",
+    "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10",
+    "E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10", "E11", "E12", "E13",
+    "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+    "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12", "G13",
+    "H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12",
+    "I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8", "I9", "I10", "I11", "I12", "I13",
+    "J1", "J2", "J3", "J4", "J5", "J6", "J7", "J8", "J9", "J10", "J11", "J12",
+    "K1", "K2", "K3", "K4", "K5", "K6", "K7", "K8", "K9", "K10", "K11", "K12", "K13",
+    "L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "L9", "L10", "L11", "L12",
+    "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12", "M13",
+    "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "N10",
+    "O1", "O2", "O3", "O4", "O5", "O6", "O7",
+    "P1", "P2", "P3", "P4",
+    "Q1"]
+
+TILE_DICT = {name: idx for idx, name in enumerate(TILE_NAMES)}
 
 # 30 sec ISI
 ISI = 30
@@ -44,19 +67,7 @@ TILE_ANGLE = tile_angle()
 TILE_RAD_ZABER = 19440 / 2
 TILE_RAD_MM = TILE_RAD_ZABER * ZABER_TO_MM
 
-# Arena Map based on 20240104
-def arena_map():
-    filename = os.path.join(DIR_ROOT, 'data/zaber_centers_20240104.csv')
-    tile_centers = pd.read_csv(filename)
-    mm_centers = tile_centers.copy()
-    mm_centers.ls_guess = np.multiply(mm_centers.ls_guess, ZABER_TO_MM)
-    mm_centers.ax_new_guess = np.multiply(mm_centers.ax_new_guess, ZABER_TO_MM)
-
-    return (mm_centers.ls_guess.to_numpy(),
-            mm_centers.ax_new_guess.to_numpy())
-
 # CCF Map
-# TODO: Unified Coordinate System
 def ccf_map():
     filename = os.path.join(DIR_ROOT, 'data/zaber_ccf.csv')
     tile_centers = pd.read_csv(filename)
@@ -66,8 +77,7 @@ def ccf_map():
     return (mm_centers.ls.to_numpy(),
             mm_centers.ax3.to_numpy())
 
-# Deprecated: Change to CCF
-TILE_CENTER = arena_map()
+TILE_CENTER = ccf_map()
 ARENA_CENTER = (1140, 1200)
 
 # tile index that defines the vertices of the arena
@@ -98,7 +108,7 @@ def load_data(dict, base_dir):
     fl_list.sort()
     for fl in fl_list:
         # extract date, time, and mice id from the file name
-        # name format: 2024-02-22T09_46_32_ p16_all_params_file.csv
+        # name format: 2024-02-22T09_46_32_p16_all_params_file.csv
         date_str = fl[:10]
         time_str = fl[11:19]
         mice_str = fl[-23:-20]
@@ -108,9 +118,16 @@ def load_data(dict, base_dir):
 
         # find low-res video: read all files in the folder with .avi extension
         rig_files = os.listdir(rig_folder)
-        video_files = [x for x in rig_files if x.startswith('video_basler_') and x.endswith('.avi')]
+        video_files = [x for x in rig_files if x.startswith('video_basler_')
+                       and x.endswith('.avi')]
         video_time = [time_diff(x[-12:-4], time_str) for x in video_files]
         video_file = video_files[np.argmin(video_time)]
+
+        # find calibrated tile name
+        tile_files = [x for x in rig_files if x.startswith('location_inputs_')
+                      and re.search(r'\d{2}\.csv$', x)]
+        tile_time = [time_diff(x[-12:-4], time_str) for x in tile_files]
+        tile_file = tile_files[np.argmin(tile_time)]
 
         # find high-res video (for pose tracking)
         videos = [x for x in hs_video if date_str.replace('-', '') in x]
@@ -124,7 +141,8 @@ def load_data(dict, base_dir):
         # add file to list
         dict[mice_str].append((os.path.join(base_dir, fl),
                                os.path.join(rig_folder, video_file),
-                               os.path.join(track_base, hs_file)))
+                               os.path.join(track_base, hs_file),
+                               os.path.join(rig_folder, tile_file)))
 
 # b12b13 (2023 Fall)
 B_MICE = {'b12': [], 'b13': []}

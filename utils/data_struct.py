@@ -1,4 +1,5 @@
 import cv2
+import pandas as pd
 import numpy as np
 import tqdm
 import os
@@ -6,15 +7,14 @@ import warnings
 import scipy.io
 from scipy.signal import butter, filtfilt
 
-from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI, TRK_CTR, \
-    TILE_CENTER, TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, VERT_TILE, TRIG_RADIUS
+from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI, TRK_CTR, TILE_CENTER, \
+    TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, VERT_TILE, TRIG_RADIUS, TILE_DICT
 
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib import patches
 matplotlib.rcParams["image.origin"] = "lower"
-
 
 class ArenaMap():
 
@@ -110,14 +110,14 @@ class ArenaMap():
                                 edgecolors='none')
                 for target in self.target.T]
 
-    # Deprecated: Will switch to CCF at some point
+    # TODO: Define arena center for CCF
     def get_center(self):
         return self.arena_center
 
 
 class SessionData(ArenaMap):
 
-    def __init__(self, name, ses, df, video_path, hs_path):
+    def __init__(self, name, ses, df, video_path, hs_path, tile_path):
         super().__init__()
 
         # name and session
@@ -139,6 +139,19 @@ class SessionData(ArenaMap):
         # cricket tiles
         self.zaber_target = self._target(df['locations'][0])
         self.target = self.zaber_target * ZABER_TO_MM
+
+        # calibrated tiles (first 6 target)
+        data_frame = pd.read_csv(tile_path, low_memory=False)
+        calib_name = list(data_frame.columns[:6])
+        calib_index = np.array([TILE_DICT[name] for name in calib_name])
+
+        ccf_referece = self.tiles[:, calib_index]
+        delta = np.median(self.target[:, :6] - ccf_referece, axis=1).reshape(-1, 1)
+
+        # shift the coordinates
+        self.target -= delta
+        self.x -= delta[0]
+        self.y -= delta[1]
 
         # time
         self.time = df['relative_time'].to_numpy()
@@ -173,10 +186,10 @@ class SessionData(ArenaMap):
 
     def _smooth_trajectory(self):
         # sampling rate = 17.8 Hz
-        # cutoff frequency = 3.5 Hz
+        # cutoff frequency = 4 Hz
         fs = 17.8
         nyquist = 0.5 * fs
-        cutoff = 3.5
+        cutoff = 4
         b, a = butter(N=2, Wn=cutoff/nyquist,
                       btype='low', analog=False)
 
