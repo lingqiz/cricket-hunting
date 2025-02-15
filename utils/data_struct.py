@@ -140,18 +140,8 @@ class SessionData(ArenaMap):
         self.zaber_target = self._target(df['locations'][0])
         self.target = self.zaber_target * ZABER_TO_MM
 
-        # calibrated tiles (first 6 target)
-        data_frame = pd.read_csv(tile_path, low_memory=False)
-        calib_name = list(data_frame.columns[:6])
-        calib_index = np.array([TILE_DICT[name] for name in calib_name])
-
-        ccf_referece = self.tiles[:, calib_index]
-        delta = np.median(self.target[:, :6] - ccf_referece, axis=1).reshape(-1, 1)
-
-        # shift the coordinates
-        self.target -= delta
-        self.x -= delta[0]
-        self.y -= delta[1]
+        # align to CCF coordinates
+        self._align_ccf(tile_path)
 
         # time
         self.time = df['relative_time'].to_numpy()
@@ -177,8 +167,14 @@ class SessionData(ArenaMap):
         # note pose data is not loaded by default
         # call _load_pose() to load tracking data
         self.hs_path = hs_path
-        self.track_path = hs_path[:-4] + '.mat'
+        self.hs = cv2.VideoCapture(hs_path + '.mp4')
+
+        # calibration of hs camera
         self.calib_path = hs_path[:-4] + '_calib.csv'
+        self._load_calib()
+
+        # tracking data
+        self.track_path = hs_path[:-4] + '.mat'
 
         # cricket catch
         self.n_catch = np.sum(self.triggered)
@@ -195,6 +191,48 @@ class SessionData(ArenaMap):
 
         self.x = filtfilt(b, a, self.x)
         self.y = filtfilt(b, a, self.y)
+
+    def _align_ccf(self, tile_path):
+        # calibrated tiles (first 6 target)
+        data_frame = pd.read_csv(tile_path, low_memory=False)
+        calib_name = list(data_frame.columns[:6])
+        calib_index = np.array([TILE_DICT[name] for name in calib_name])
+
+        ccf_referece = self.tiles[:, calib_index]
+        delta = np.median(self.target[:, :6] - ccf_referece, axis=1).reshape(-1, 1)
+
+        # shift the coordinates
+        self.target -= delta
+        self.x -= delta[0]
+        self.y -= delta[1]
+
+    def _load_calib(self):
+        '''
+        Find the corresponding frame index in the
+        high-speed camera for each zaber point
+        '''
+        # frame rate of hs camera
+        frame_rate = 120
+
+        if os.path.exists(self.calib_path):
+            calib_array = pd.read_csv(self.calib_path)
+            calib_axis = calib_array[['video_index',
+                                      'zaber_index']].to_numpy().T
+            zaber_axis = calib_axis[1]
+            video_axis = calib_axis[0]
+
+            self.hs_index = np.zeros(self.time.size).astype(int)
+            for idx in range(self.time.size):
+                # find the closest index in zaber_axis
+                zaber_idx = np.argmin(np.abs(zaber_axis - idx))
+                zaber_frame = zaber_axis[zaber_idx]
+                video_frame = video_axis[zaber_idx]
+
+                delta = (self.time[idx] - self.time[zaber_frame]) * frame_rate
+                self.hs_index[idx] = int(video_frame + delta)
+
+        else:
+            self.hs_index = None
 
     def _load_pose(self):
         if not os.path.exists(self.track_path):
@@ -218,7 +256,7 @@ class SessionData(ArenaMap):
         b, a = butter(N=2, Wn=cutoff/nyquist,
                       btype='low', analog=False)
 
-        self.pose = filtfilt(b, a, points, axis=-1)
+        self.keypoints = filtfilt(b, a, points, axis=-1)
 
     def to_trials(self, non_catch=False):
         if self.n_catch == 0:
@@ -259,6 +297,10 @@ class SessionData(ArenaMap):
         _, frame = self.video.read()
 
         return cv2.resize(frame, dsize=None, fx=0.5, fy=0.5)
+
+    def hs_frame(self, index):
+        # TODO
+        pass
 
     # 30 sec ISI * average frame rate
     def _trial_index(self, trial_idx, prepend=None, append=0, eos=False):

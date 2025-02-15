@@ -122,7 +122,7 @@ else:
     session_data._load_pose()
 
     video_path = session_data.hs_path
-    points = session_data.pose
+    points = session_data.keypoints
     track_conf = session_data.track_conf
 
 # play video
