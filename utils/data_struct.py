@@ -392,7 +392,7 @@ class DataPlot():
 
     def _init_plot(self, ses_obj, trial_obj):
         # create figure
-        self.fig, self.axs = plt.subplots(1, 3, figsize=(30, 10))
+        self.fig, self.axs = plt.subplots(1, 3, figsize=(30, 12))
 
         # LEFT PLOT
         # ses_obj.draw_arena(axs[0])
@@ -415,19 +415,21 @@ class DataPlot():
         self.axs[0].add_patch(self.circle)
 
         # write information
-        self.text = self.axs[0].text(20, 20, 'Chirps: 0, Tile Visit: 0', fontsize=12)
+        self.text = self.axs[0].text(20, -100, 'Chirps: 0, Tile Visit: 0', fontsize=12)
 
         # LOW RES VIDEO
         self.im = self.axs[1].imshow(ses_obj.get_frame(0), cmap='gray')
         self.axs[1].invert_xaxis()
 
         # add an indicator for chirp
-        self.ind_right = self.axs[1].scatter(50, 50, s=625, marker='s',
-                                             color='tab:blue', label='Chirp')
+        self.ind_right = self.axs[1].scatter(50, 50, s=625, marker='s', color='tab:blue', label='Chirp')
         self.ind_right.set_visible(False)
 
         # HIGH RES VIDEO
         self.im_hs = self.axs[2].imshow(ses_obj.hs_frame(0), cmap='gray')
+        self.axs[2].invert_yaxis()
+        self.ind_hs = self.axs[1].scatter(50, 50, s=625, marker='s', color='tab:blue', label='Chirp')
+        self.ind_hs.set_visible(False)
 
         # axis format
         self.axs[0].set_xlim(-50, 2350)
@@ -436,6 +438,11 @@ class DataPlot():
 
         self.axs[1].axis('off')
         self.axs[1].set_aspect('equal')
+
+        self.axs[2].axis('off')
+        self.axs[2].set_aspect('equal')
+
+        plt.tight_layout()
 
     def select_color(self, index):
         if index >= len(self.colors):
@@ -456,6 +463,7 @@ class DataPlot():
                     self.chirp_active = False
                     self.chirp_point.set_facecolor('r')
                     self.ind_right.set_visible(False)
+                    self.ind_hs.set_visible(False)
                     self.step_count = 0
 
             # inactive -> active
@@ -466,6 +474,7 @@ class DataPlot():
                 self.chirp_point = self.targets[ses_obj.chirp_loc[i]]
                 self.chirp_point.set_facecolor('b')
                 self.ind_right.set_visible(True)
+                self.ind_hs.set_visible(True)
 
                 self._check_tile_visit(np.array([ses_obj.x[i], ses_obj.y[i]]))
 
@@ -483,6 +492,7 @@ class DataPlot():
 
         # display video frame
         self.im.set_data(ses_obj.get_frame(i))
+        self.im_hs.set_data(ses_obj.hs_frame(i))
 
         # update progress bar
         self.pbar.update(1)
