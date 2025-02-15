@@ -189,6 +189,7 @@ if args.mode == 'hs':
     # play video
     hs_player(video_path, points, track_conf)
 
+# dual video player
 elif args.mode == 'dual':
     load_data([args.animal])
 
