@@ -112,35 +112,38 @@ def dual_player(session_data):
     separator = np.full((ref_frame.shape[0], separator_width, 3),
                         (128, 128, 128), dtype=np.uint8)
 
+    paused = False
     while True:
-        low_res = session_data.get_frame(frame_idx)
-        high_res = session_data.hs_frame(frame_idx)
 
-        if high_res is not None:
-            # Draw pose on the frame
-            pose_idx = session_data.hs_index[frame_idx]
-            points = pose_data[:, pose_idx].reshape(-1, 2)
-            conf = pose_conf[:, pose_idx]
-            high_res = draw_cross(high_res, points, conf)
-            high_res = cv2.resize(high_res, (low_res.shape[1], low_res.shape[0]))
+        if not paused:
+            low_res = session_data.get_frame(frame_idx)
+            high_res = session_data.hs_frame(frame_idx)
 
-        else:
-            # Empty frame
-            high_res = np.zeros_like(low_res)
+            if high_res is not None:
+                # Draw pose on the frame
+                pose_idx = session_data.hs_index[frame_idx]
+                points = pose_data[:, pose_idx].reshape(-1, 2)
+                conf = pose_conf[:, pose_idx]
+                high_res = draw_cross(high_res, points, conf)
+                high_res = cv2.resize(high_res, (low_res.shape[1], low_res.shape[0]))
 
-        # Combine low-res and high-res frames side-by-side
-        low_res = cv2.flip(low_res, -1)
-        combined_frame = np.hstack((low_res, separator, high_res))
+            else:
+                # Empty frame
+                high_res = np.zeros_like(low_res)
 
-        # Add text
-        frame_text = f"Frame: {frame_idx}"
-        time_text = f"Time: {session_data.time[frame_idx]:.2f} sec"
-        cv2.putText(combined_frame, frame_text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
-        cv2.putText(combined_frame, time_text, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+            # Combine low-res and high-res frames side-by-side
+            low_res = cv2.flip(low_res, -1)
+            combined_frame = np.hstack((low_res, separator, high_res))
 
-        cv2.imshow('Pose Tracking', combined_frame)
-        # Next frame
-        frame_idx += 1
+            # Add text
+            frame_text = f"Frame: {frame_idx}"
+            time_text = f"Time: {session_data.time[frame_idx]:.2f} sec"
+            cv2.putText(combined_frame, frame_text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+            cv2.putText(combined_frame, time_text, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+
+            cv2.imshow('Pose Tracking', combined_frame)
+            # Next frame
+            frame_idx += 1
 
         # Delay in milliseconds (adjust based on FPS)
         key = cv2.waitKey(int((session_data.time[frame_idx + 1] -
@@ -148,6 +151,10 @@ def dual_player(session_data):
 
         if key == ord('q'):
             break
+        if key == ord('p'):
+            paused = not paused
+        if key == ord('d'):
+            frame_idx += 50
 
 # Setup arguments
 parser = argparse.ArgumentParser(description='Play video tracking data')
