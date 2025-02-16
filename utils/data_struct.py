@@ -522,7 +522,7 @@ class DataPlot():
         
         # update keypoints
         kp_index = ses_obj.hs_index[i]
-        if kp_index >= 0:
+        if kp_index >= 0 and kp_index < ses_obj.hs_length:
             points = ses_obj.keypoints[:, kp_index].reshape(-1, 2)
             conf = ses_obj.track_conf[:, kp_index] * 0.80 + 0.10
             self.keypoints.set_offsets(points)
