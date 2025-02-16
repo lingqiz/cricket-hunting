@@ -433,6 +433,8 @@ class DataPlot():
 
         # LOW RES VIDEO
         self.im = self.axs[1].imshow(ses_obj.get_frame(0), cmap='gray')
+        self.axs[1].set_xlim(0, 1024)
+        self.axs[1].set_ylim(0, 1024)        
         self.axs[1].invert_xaxis()
 
         # add an indicator for chirp
@@ -441,7 +443,10 @@ class DataPlot():
 
         # HIGH RES VIDEO
         self.im_hs = self.axs[2].imshow(ses_obj.hs_frame(0), cmap='gray')
+        self.axs[2].set_xlim(0, 1024)
+        self.axs[2].set_ylim(0, 1024)
         self.axs[2].invert_yaxis()
+        
         self.ind_hs = self.axs[2].scatter(950, 950, s=625, marker='s', color='tab:blue', label='Chirp')
         self.ind_hs.set_visible(False)
 
@@ -458,13 +463,9 @@ class DataPlot():
         self.axs[0].set_aspect('equal')
 
         self.axs[1].axis('off')
-        self.axs[1].set_xlim(0, 1024)
-        self.axs[1].set_ylim(0, 1024)
         self.axs[1].set_aspect('equal')
 
-        self.axs[2].axis('off')
-        self.axs[2].set_xlim(0, 1024)
-        self.axs[2].set_ylim(0, 1024)
+        self.axs[2].axis('off')        
         self.axs[2].set_aspect('equal')
 
         plt.tight_layout()
