@@ -447,7 +447,7 @@ class DataPlot():
         self.axs[2].set_ylim(0, 1024)
         self.axs[2].invert_yaxis()
         
-        self.ind_hs = self.axs[2].scatter(950, 950, s=625, marker='s', color='tab:blue', label='Chirp')
+        self.ind_hs = self.axs[2].scatter(974, 974, s=625, marker='s', color='tab:blue', label='Chirp')
         self.ind_hs.set_visible(False)
 
         # draw keypoints
