@@ -302,7 +302,7 @@ class SessionData(ArenaMap):
         self.video.set(cv2.CAP_PROP_POS_FRAMES, index)
         _, frame = self.video.read()
 
-        return cv2.resize(frame, dsize=None, fx=0.5, fy=0.5)
+        return cv2.resize(frame, (1024, 1024))
 
     def hs_frame(self, index):
         hs_index = self.hs_index[index]
@@ -402,7 +402,11 @@ class DataPlot():
 
     def _init_plot(self, ses_obj, trial_obj):
         # create figure
-        self.fig, self.axs = plt.subplots(1, 3, figsize=(30, 12))
+        # self.fig, self.axs = plt.subplots(1, 3, figsize=(32, 12))
+        
+        self.fig = plt.figure(figsize=(32, 12))
+        gs = self.fig.add_gridspec(1, 3, width_ratios=[1, 1, 1])
+        self.axs = [self.fig.add_subplot(gs[i]) for i in range(3)]
 
         # LEFT PLOT
         # ses_obj.draw_arena(axs[0])
@@ -438,7 +442,7 @@ class DataPlot():
         # HIGH RES VIDEO
         self.im_hs = self.axs[2].imshow(ses_obj.hs_frame(0), cmap='gray')
         self.axs[2].invert_yaxis()
-        self.ind_hs = self.axs[2].scatter(50, 50, s=625, marker='s', color='tab:blue', label='Chirp')
+        self.ind_hs = self.axs[2].scatter(950, 950, s=625, marker='s', color='tab:blue', label='Chirp')
         self.ind_hs.set_visible(False)
 
         # draw keypoints
@@ -454,9 +458,13 @@ class DataPlot():
         self.axs[0].set_aspect('equal')
 
         self.axs[1].axis('off')
+        self.axs[1].set_xlim(0, 1024)
+        self.axs[1].set_ylim(0, 1024)
         self.axs[1].set_aspect('equal')
 
         self.axs[2].axis('off')
+        self.axs[2].set_xlim(0, 1024)
+        self.axs[2].set_ylim(0, 1024)
         self.axs[2].set_aspect('equal')
 
         plt.tight_layout()
