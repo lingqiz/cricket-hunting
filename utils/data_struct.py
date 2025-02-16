@@ -6,6 +6,7 @@ import os
 import warnings
 import scipy.io
 from scipy.signal import butter, filtfilt
+from matplotlib import colormaps
 
 from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI, TRK_CTR, TILE_CENTER, \
     TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, VERT_TILE, TRIG_RADIUS, TILE_DICT
@@ -372,7 +373,16 @@ class SessionData(ArenaMap):
 class DataPlot():
 
     def __init__(self):
+        # target frame rate
         self.target_fps = 10
+
+        # create a color map for keypoints
+        num_points = 37
+        kp_colors = []
+        cmap = colormaps.get_cmap('Spectral')
+        for i in range(num_points):
+            kp_colors.append(cmap(i / (num_points - 1)))
+        self.kp_colors = np.array(kp_colors)
 
     def _init_vars(self):
         self.chirp_count = 0
@@ -428,8 +438,15 @@ class DataPlot():
         # HIGH RES VIDEO
         self.im_hs = self.axs[2].imshow(ses_obj.hs_frame(0), cmap='gray')
         self.axs[2].invert_yaxis()
-        self.ind_hs = self.axs[1].scatter(50, 50, s=625, marker='s', color='tab:blue', label='Chirp')
+        self.ind_hs = self.axs[2].scatter(50, 50, s=625, marker='s', color='tab:blue', label='Chirp')
         self.ind_hs.set_visible(False)
+
+        # draw keypoints
+        points = ses_obj.keypoints[:, 0].reshape(-1, 2)
+        conf = ses_obj.track_conf[:, 0] * 0.70 + 0.20
+        self.keypoints = self.axs[2].scatter(points[:, 0], points[:, 1],
+                                             c=self.kp_colors, alpha=conf,
+                                             marker='+')
 
         # axis format
         self.axs[0].set_xlim(-50, 2350)
@@ -493,6 +510,14 @@ class DataPlot():
         # display video frame
         self.im.set_data(ses_obj.get_frame(i))
         self.im_hs.set_data(ses_obj.hs_frame(i))
+        
+        # update keypoints
+        kp_index = ses_obj.hs_index[i]
+        if kp_index >= 0:
+            points = ses_obj.keypoints[:, kp_index].reshape(-1, 2)
+            conf = ses_obj.track_conf[:, kp_index] * 0.80 + 0.10
+            self.keypoints.set_offsets(points)
+            self.keypoints.set_alpha(conf)
 
         # update progress bar
         self.pbar.update(1)

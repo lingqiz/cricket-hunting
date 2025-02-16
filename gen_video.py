@@ -27,6 +27,7 @@ all_session = MICE_HUNTING[args.name]
 
 for ses_index in sess:
     data = all_session[ses_index]
+    data._load_pose()
 
     length = int(data.video.get(cv2.CAP_PROP_FRAME_COUNT))
     print('video frame', length)
