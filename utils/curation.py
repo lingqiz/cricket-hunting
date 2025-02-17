@@ -25,7 +25,7 @@ def load_data(list_name):
             select_data = all_data[:idx_select]
 
             # rest of the sessions with high catch number
-            # + session 30/32 (2nd tile sound off)
+            # + session 30/32 (2nd tile sound off), and 31
             for data in all_data[idx_select:]:
                 if data.n_catch >= 4 or (data.session >= 30 and data.session <= 32):
                     select_data.append(data)

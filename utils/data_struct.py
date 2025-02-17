@@ -111,7 +111,6 @@ class ArenaMap():
                                 edgecolors='none')
                 for target in self.target.T]
 
-    # TODO: Define arena center for CCF
     def get_center(self):
         return self.arena_center
 
@@ -507,9 +506,9 @@ class DataPlot():
             if ses_obj.triggered[i] == 1:
                 self.captured = True
                 # set indicators to green
-                self.ind_right.set_facecolor('g')
+                self.ind_right.set_color('g')
                 self.ind_right.set_visible(True)
-                self.ind_hs.set_facecolor('g')
+                self.ind_hs.set_color('g')
                 self.ind_hs.set_visible(True)
 
         # plot trajectory data
@@ -622,92 +621,77 @@ class TrialData(ArenaMap):
 
         return np.sum(np.sqrt(dx**2 + dy**2)) * MM_TO_M
 
-    # data reduction into stop locations
-    def stop_location(self, rotate=False, center=False, filter_stop=False):
-        return StopLocation(np.array([self.chirp_x, self.chirp_y]),
-                            np.array([self.x[0], self.y[0]]),
-                            np.array([self.x[-1], self.y[-1]]),
-                            self.time[self.chirp == 1],
-                            self.target, rotate=rotate,
-                            center=center, filter_stop=filter_stop)
+    # data reduction into stop (chirps) data
+    def stop_data(self):
+        self.stops = StopData(np.array([self.chirp_x, self.chirp_y]),
+                              np.array([self.x[0], self.y[0]]),
+                              np.array([self.x[-1], self.y[-1]]),
+                              self.time[self.chirp == 1],
+                              self.target, self.trial_idx)
+
+        return self.stops
 
 
 # class for different data reductions of the trial
-class StopLocation(ArenaMap):
-    def __init__(self, loc, start, end, t, target,
-                 rotate=False, center=False,
-                 filter_stop=False):
+class StopData(ArenaMap):
+    def __init__(self, loc, start, end, t, target, trial_index):
         super().__init__()
 
+        # stop location and time
         self.loc = loc
+        self.t = t
         self.start = start.reshape(-1, 1)
         self.end = end.reshape(-1, 1)
-        self.t = t
+
+        # target
         self.target = target
+        self.target_visit = np.zeros(target.shape[1])
+        self.end_target = trial_index
+        self._target_visit()
 
-        if rotate:
-            self._rotate()
+    def _target_visit(self):
+        '''
+        Compute target visit for the current trial
+        '''
+        locations = np.concatenate([self.start, self.loc, self.end], axis=1)
 
-        if center:
-            self._center()
+        for idx in range(self.target.shape[1]):
+            dist = np.linalg.norm(locations - self.target[:, idx].reshape(-1, 1), axis=0)
+            self.target_visit[idx] = np.any(dist <= TRIG_RADIUS)
 
-        if filter_stop:
-            self._filter_stop()
+        # if start location is inside a target
+        start_ind = np.linalg.norm(self.target - self.start, axis=0) <= TRIG_RADIUS
+        if np.any(start_ind):
+            self.start_target = np.where(start_ind)[0][0]
+        else:
+            self.start_target = None
 
-    def _rotate(self):
-        center = np.array(self.get_center()).reshape(-1, 1)
-        self.start = self.start - center
-        self.loc = self.loc - center
-        self.end = self.end - center
+    def target_unique_visit(self):
+        '''
+        Count # of target visited, excluding the start location
+        '''
+        visit_ind = np.copy(self.target_visit)
+        if self.start_target is not None:
+            visit_ind[self.start_target] = 0
 
-        self.rot_angle = - np.arctan2(self.end[1], self.end[0]).squeeze() + np.pi
-        rotate_matrix = np.array([[np.cos(self.rot_angle), -np.sin(self.rot_angle)],
-                                  [np.sin(self.rot_angle), np.cos(self.rot_angle)]])
-
-        self.loc = rotate_matrix @ self.loc
-        self.start = rotate_matrix @ self.start
-        self.end = rotate_matrix @ self.end
-        self.target = rotate_matrix @ self.target
-
-    def _center(self):
-        self.start -= self.end
-        self.loc -= self.end
-        self.target -= self.end
-        self.end -= self.end
+        return np.sum(visit_ind)
 
     # filter out stops that are less than 10 mm from the last one
+    # TODO: change to combine stops (chrip bout)
     def _filter_stop(self, threshold=10):
         index = np.where(self.delta_distance() < threshold)[0] + 1
         self.loc = np.delete(self.loc, index, axis=1)
 
-    def tile_visit_unique(self):
-        '''
-        Unique tile visit count for the trial,
-        excluding the start tile, and including the end tile
-        '''
-        locations = np.concatenate([self.loc, self.end], axis=1)
-
-        counter = 0
-        for idx in range(self.target.shape[1]):
-            dist = np.linalg.norm(locations - self.target[:, idx].reshape(-1, 1), axis=0)
-            tile_visit = (dist <= TRIG_RADIUS).astype(int)
-            counter += (np.sum(tile_visit) > 0).astype(int)
-
-        start_ind = np.any(np.linalg.norm(self.target - self.start, axis=0) <= TRIG_RADIUS)
-        return counter - start_ind.astype(int)
-
     # useful quantities to calculate
-    def distance(self):
-        return np.linalg.norm(self.loc, axis=0)
+    def delta_distance(self, bout=False):
+        '''
+        Distance of movement between stops
+        '''
 
-    def angle(self):
-        return np.rad2deg(np.arctan2(self.loc[1], self.loc[0]))
+        if bout:
+            # TODO
+            pass
+        else:
+            delta = self.loc[:, 1:] - self.loc[:, :-1]
 
-    def delta(self):
-        return self.loc[:, 1:] - self.loc[:, :-1]
-
-    def delta_distance(self):
-        return np.linalg.norm(self.delta(), axis=0)
-
-    def delta_angle(self):
-        return np.rad2deg(np.arctan2(self.delta()[1], self.delta()[0]))
+        return np.linalg.norm(delta, axis=0)

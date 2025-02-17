@@ -78,7 +78,7 @@ def ccf_map():
             mm_centers.ax3.to_numpy())
 
 TILE_CENTER = ccf_map()
-ARENA_CENTER = (1140, 1200)
+ARENA_CENTER = (1150, 1067)
 
 # tile index that defines the vertices of the arena
 # in counter-clockwise order
