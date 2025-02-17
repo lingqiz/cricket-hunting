@@ -402,14 +402,11 @@ class DataPlot():
 
     def _init_plot(self, ses_obj, trial_obj):
         # create figure
-        # self.fig, self.axs = plt.subplots(1, 3, figsize=(32, 12))
-        
         self.fig = plt.figure(figsize=(32, 12))
         gs = self.fig.add_gridspec(1, 3, width_ratios=[1, 1, 1])
         self.axs = [self.fig.add_subplot(gs[i]) for i in range(3)]
 
         # LEFT PLOT
-        # ses_obj.draw_arena(axs[0])
         ses_obj.draw_boundary(self.axs[0])
         self.target_xy = ses_obj.target
         self.targets = ses_obj.draw_target(self.axs[0], draw_hex=True)
@@ -434,7 +431,7 @@ class DataPlot():
         # LOW RES VIDEO
         self.im = self.axs[1].imshow(ses_obj.get_frame(0), cmap='gray')
         self.axs[1].set_xlim(0, 1024)
-        self.axs[1].set_ylim(0, 1024)        
+        self.axs[1].set_ylim(0, 1024)
         self.axs[1].invert_xaxis()
 
         # add an indicator for chirp
@@ -446,7 +443,7 @@ class DataPlot():
         self.axs[2].set_xlim(0, 1024)
         self.axs[2].set_ylim(0, 1024)
         self.axs[2].invert_yaxis()
-        
+
         self.ind_hs = self.axs[2].scatter(974, 974, s=625, marker='s', color='tab:blue', label='Chirp')
         self.ind_hs.set_visible(False)
 
@@ -465,7 +462,7 @@ class DataPlot():
         self.axs[1].axis('off')
         self.axs[1].set_aspect('equal')
 
-        self.axs[2].axis('off')        
+        self.axs[2].axis('off')
         self.axs[2].set_aspect('equal')
 
         plt.tight_layout()
@@ -509,8 +506,11 @@ class DataPlot():
 
             if ses_obj.triggered[i] == 1:
                 self.captured = True
+                # set indicators to green
                 self.ind_right.set_facecolor('g')
                 self.ind_right.set_visible(True)
+                self.ind_hs.set_facecolor('g')
+                self.ind_hs.set_visible(True)
 
         # plot trajectory data
         self.ll.set_data(ses_obj.x[self.start_idx:i], ses_obj.y[self.start_idx:i])
@@ -519,7 +519,7 @@ class DataPlot():
         # display video frame
         self.im.set_data(ses_obj.get_frame(i))
         self.im_hs.set_data(ses_obj.hs_frame(i))
-        
+
         # update keypoints
         kp_index = ses_obj.hs_index[i]
         if kp_index >= 0 and kp_index < ses_obj.hs_length:
