@@ -6,6 +6,9 @@ MICE_HUNTING = {}
 MICE_NOSOUND = {}
 
 def load_data(list_name):
+    '''
+    Load data for a list of mice
+    '''
     for name in list_name:
         all_data = []
         for idx, file in enumerate(ALL_MICE[name]):
@@ -13,7 +16,7 @@ def load_data(list_name):
             data = SessionData(name, idx, data_frame, *file[1:])
             all_data.append(data)
 
-        # PWK mice
+        # PWK female
         if name.startswith('p1'):
             idx_select = 15
             idx_nosound = -4
@@ -21,9 +24,9 @@ def load_data(list_name):
             # first 15 sessions
             select_data = all_data[:idx_select]
 
-            # rest of the sessions with high catch number
+            # rest of the sessions with high catch number + session 32 (2nd tile sound off)
             for data in all_data[idx_select:]:
-                if data.n_catch >= 4:
+                if data.n_catch >= 4 or data.session == 32:
                     select_data.append(data)
 
             MICE_HUNTING[name] = select_data
@@ -34,7 +37,7 @@ def load_data(list_name):
                 f'{len(no_sound)} no sound sessions')
 
         # PWK male
-        if name.startswith('p2'):
+        elif name.startswith('p2'):
             select_data = all_data[-12:-8] + all_data[-5:]
             MICE_NOSOUND[name] = select_data
             print(f'{name}: {len(select_data)} no sound sessions')
@@ -45,4 +48,7 @@ def load_data(list_name):
             print(f'{name}: {len(select_data)} hunting sessions')
 
 def load_all():
+    '''
+    Load data for all mice in the dataset
+    '''
     load_data(['p16', 'p17', 'p18', 'b12', 'b13', 'p20', 'p21'])
