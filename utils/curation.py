@@ -24,9 +24,10 @@ def load_data(list_name):
             # first 15 sessions
             select_data = all_data[:idx_select]
 
-            # rest of the sessions with high catch number + session 32 (2nd tile sound off)
+            # rest of the sessions with high catch number
+            # + session 30/32 (2nd tile sound off)
             for data in all_data[idx_select:]:
-                if data.n_catch >= 4 or data.session == 32:
+                if data.n_catch >= 4 or (data.session >= 30 and data.session <= 32):
                     select_data.append(data)
 
             MICE_HUNTING[name] = select_data
