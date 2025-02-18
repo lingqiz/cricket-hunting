@@ -649,6 +649,10 @@ class StopData(ArenaMap):
         self.end_target = trial_index
         self._target_visit()
 
+        # calculate stop bout based on
+        # distance threshold (10 mm)
+        self._stop_bout()
+
     def _target_visit(self):
         '''
         Compute target visit for the current trial
@@ -674,24 +678,40 @@ class StopData(ArenaMap):
         if self.start_target is not None:
             visit_ind[self.start_target] = 0
 
-        return np.sum(visit_ind)
+        return np.sum(visit_ind).astype(int)
+    
+    def _stop_bout(self, threshold=10):
+        '''
+        Compute chirp bout based on the distance threshold
+        '''
+        bout_loc = [self.loc[:, 0]]
+        bout_start = [self.t[0]]
+        bout_end = [self.t[0]]
+        
+        # calculate bout based on distance threshold
+        bout_index = 0
+        for idx in range(1, self.loc.shape[1]):
+            if np.linalg.norm(self.loc[:, idx] - bout_loc[bout_index]) <= threshold:
+                bout_end[bout_index] = self.t[idx]
+                
+            else:
+                bout_index += 1
+                bout_loc.append(self.loc[:, idx])
+                bout_start.append(self.t[idx])
+                bout_end.append(self.t[idx])
 
-    # filter out stops that are less than 10 mm from the last one
-    # TODO: change to combine stops (chrip bout)
-    def _filter_stop(self, threshold=10):
-        index = np.where(self.delta_distance() < threshold)[0] + 1
-        self.loc = np.delete(self.loc, index, axis=1)
+        # convert to numpy array
+        self.bout_loc = np.array(bout_loc).T
+        self.bout_start = np.array(bout_start)
+        self.bout_end = np.array(bout_end)
 
-    # useful quantities to calculate
     def delta_distance(self, bout=False):
         '''
         Distance of movement between stops
         '''
-
         if bout:
-            # TODO
-            pass
+            delta = self.bout_loc[:, 1:] - self.bout_loc[:, :-1]
         else:
             delta = self.loc[:, 1:] - self.loc[:, :-1]
-
+            
         return np.linalg.norm(delta, axis=0)
