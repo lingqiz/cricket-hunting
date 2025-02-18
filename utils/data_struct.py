@@ -276,6 +276,10 @@ class SessionData(ArenaMap):
 
         return [self._construct_trial(idx) for idx in range(self.n_catch)]
 
+    def get_eos(self):
+        # get data for the end of a session (last catch to end)
+        return self._construct_trial(self.n_catch, eos=True)
+
     def _construct_trial(self, trial_idx, eos=False):
         start_idx, n_frame = self._trial_index(trial_idx, eos=eos)
         end_idx = start_idx + n_frame
@@ -679,7 +683,7 @@ class StopData(ArenaMap):
             visit_ind[self.start_target] = 0
 
         return np.sum(visit_ind).astype(int)
-    
+
     def _stop_bout(self, threshold=10):
         '''
         Compute chirp bout based on the distance threshold
@@ -687,13 +691,13 @@ class StopData(ArenaMap):
         bout_loc = [self.loc[:, 0]]
         bout_start = [self.t[0]]
         bout_end = [self.t[0]]
-        
+
         # calculate bout based on distance threshold
         bout_index = 0
         for idx in range(1, self.loc.shape[1]):
             if np.linalg.norm(self.loc[:, idx] - bout_loc[bout_index]) <= threshold:
                 bout_end[bout_index] = self.t[idx]
-                
+
             else:
                 bout_index += 1
                 bout_loc.append(self.loc[:, idx])
@@ -713,5 +717,5 @@ class StopData(ArenaMap):
             delta = self.bout_loc[:, 1:] - self.bout_loc[:, :-1]
         else:
             delta = self.loc[:, 1:] - self.loc[:, :-1]
-            
+
         return np.linalg.norm(delta, axis=0)
