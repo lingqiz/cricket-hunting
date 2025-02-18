@@ -1,6 +1,7 @@
 from .data_loader import ALL_MICE
 from .data_struct import SessionData
 import pandas as pd
+import numpy as np
 
 MICE_HUNTING = {}
 MICE_NOSOUND = {}
@@ -29,6 +30,10 @@ def load_data(list_name):
             for data in all_data[idx_select:]:
                 if data.n_catch >= 4 or (data.session >= 30 and data.session <= 32):
                     select_data.append(data)
+
+                # target tile correction for session 30
+                if data.session == 30:
+                    data.target[:, 6:] += np.array([55, 40]).reshape(2, 1)
 
             MICE_HUNTING[name] = select_data
             no_sound = all_data[idx_nosound:]

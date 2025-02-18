@@ -137,8 +137,8 @@ class SessionData(ArenaMap):
         self._smooth_trajectory()
 
         # cricket tiles
-        self.zaber_target = self._target(df['locations'][0])
-        self.target = self.zaber_target * ZABER_TO_MM
+        zaber_target = self._target(df['locations'][0])
+        self.target = zaber_target * ZABER_TO_MM
 
         # align to CCF coordinates
         self._align_ccf(tile_path)
