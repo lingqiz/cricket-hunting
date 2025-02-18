@@ -123,10 +123,11 @@ class AnimalPose():
         Center the pose data around the average of an anchor,
         defined by center_points (default Mouse.HEAD).
         '''
-        mouse_center = self.average_point(anchor_points)
-        centered = self.xy - mouse_center[np.newaxis, :, :]
+        return self.center_points(self.xy, anchor_points)
 
-        return AnimalPose(centered)
+    def center_points(self, xy, anchor_points=[Mouse.HEAD]):
+        mouse_center = self.average_point(anchor_points)
+        return AnimalPose(xy - mouse_center[np.newaxis, :, :])
 
     def compute_angle(self, anchor_points):
         '''
@@ -143,6 +144,9 @@ class AnimalPose():
         Rotate the pose data so anchor points
         are aligned with target angle (-y by default).
         '''
+        return self.rotate_points(self.xy, anchor_points, target)
+
+    def rotate_points(self, xy, anchor_points=[Mouse.TAIL_BASE], target=-np.pi/2):
         angle = self.compute_angle(anchor_points)
         theta = target - angle
 
@@ -156,5 +160,5 @@ class AnimalPose():
             [sin_t, cos_t]])
 
         # apply rotation
-        rotated = np.einsum('idk, mdk -> mik', rotations, self.xy)
+        rotated = np.einsum('idk, mdk -> mik', rotations, xy)
         return AnimalPose(rotated)
