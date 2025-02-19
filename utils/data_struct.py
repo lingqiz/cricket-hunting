@@ -300,23 +300,30 @@ class SessionData(ArenaMap):
         arr[np.isnan(arr)] = 0
         return arr.astype(int)
 
-    def get_frame(self, index):
+    def get_frame(self, index, rgb=True):
         # get frame from video
         self.video.set(cv2.CAP_PROP_POS_FRAMES, index)
         _, frame = self.video.read()
 
-        return cv2.resize(frame, (1024, 1024))
+        if rgb:
+            return cv2.resize(frame, (1024, 1024))
 
-    def hs_frame(self, index):
+        return cv2.resize(frame, (1024, 1024))[:, :, 0]
+
+    def hs_frame(self, index, rgb=True):
         hs_index = self.hs_index[index]
 
         if hs_index < 0 or hs_index >= self.hs_length:
-            return np.zeros(self.hs_shape).astype(np.uint8)
+            frame = np.zeros(self.hs_shape).astype(np.uint8)
 
-        self.hs.set(cv2.CAP_PROP_POS_FRAMES, hs_index)
-        _, frame = self.hs.read()
+        else:
+            self.hs.set(cv2.CAP_PROP_POS_FRAMES, hs_index)
+            _, frame = self.hs.read()
 
-        return frame
+        if rgb:
+            return frame
+
+        return frame[:, :, 0]
 
     # 30 sec ISI * average frame rate
     def _trial_index(self, trial_idx, prepend=None, append=0, eos=False):
@@ -432,7 +439,7 @@ class DataPlot():
         self.text = self.axs[0].text(20, -100, 'Chirps: 0, Tile Visit: 0', fontsize=12)
 
         # LOW RES VIDEO
-        self.im = self.axs[1].imshow(ses_obj.get_frame(0), cmap='gray')
+        self.im = self.axs[1].imshow(ses_obj.get_frame(0, rgb=False), cmap='gray')
         self.axs[1].set_xlim(0, 1024)
         self.axs[1].set_ylim(0, 1024)
         self.axs[1].invert_xaxis()
@@ -442,7 +449,7 @@ class DataPlot():
         self.ind_right.set_visible(False)
 
         # HIGH RES VIDEO
-        self.im_hs = self.axs[2].imshow(ses_obj.hs_frame(0), cmap='gray')
+        self.im_hs = self.axs[2].imshow(ses_obj.hs_frame(0, rgb=True), cmap='gray')
         self.axs[2].set_xlim(0, 1024)
         self.axs[2].set_ylim(0, 1024)
         self.axs[2].invert_yaxis()
@@ -520,8 +527,8 @@ class DataPlot():
         self.circle.center = (ses_obj.x[i], ses_obj.y[i])
 
         # display video frame
-        self.im.set_data(ses_obj.get_frame(i))
-        self.im_hs.set_data(ses_obj.hs_frame(i))
+        self.im.set_data(ses_obj.get_frame(i, rgb=False))
+        self.im_hs.set_data(ses_obj.hs_frame(i, rgb=True))
 
         # update keypoints
         kp_index = ses_obj.hs_index[i]
