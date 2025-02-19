@@ -696,12 +696,14 @@ class StopData(ArenaMap):
         '''
         Compute chirp bout based on the distance threshold
         '''
+        # if no stop in trial
         if self.t.size == 0:
             self.bout_loc = np.empty((2, 0))
             self.bout_start = np.empty((0))
             self.bout_end = np.empty((0))
             return
 
+        # compute chirp bout
         bout_loc = [self.loc[:, 0]]
         bout_start = [self.t[0]]
         bout_end = [self.t[0]]
