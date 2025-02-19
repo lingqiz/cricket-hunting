@@ -286,7 +286,8 @@ class SessionData(ArenaMap):
 
         return TrialData(self, self.name, self.session, trial_idx, self.time[start_idx:end_idx],
                          self.chirped[start_idx:end_idx], self.x[start_idx:end_idx],
-                         self.y[start_idx:end_idx], self.target, self.chirp_loc[start_idx:end_idx])
+                         self.y[start_idx:end_idx], self.target, self.chirp_loc[start_idx:end_idx],
+                         catch=not eos)
 
     def _target(self, loc):
         loc = loc[1:-1].split(',')
