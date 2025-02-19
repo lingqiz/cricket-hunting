@@ -21,6 +21,8 @@ scikit-learn = "^1.6.1"
 [tool.poetry.group.dev.dependencies]
 jupyterlab = "^4.3.2"
 seaborn = "^0.13.2"
+ipywidgets = "^8.1.5"
+widgetsnbextension = "^4.0.13"
 
 [build-system]
 requires = ["poetry-core"]
