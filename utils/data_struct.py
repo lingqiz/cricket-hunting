@@ -664,6 +664,8 @@ class StopData(ArenaMap):
         # calculate stop bout based on
         # distance threshold (10 mm)
         self._stop_bout()
+        self.n_stop = self.loc.shape[1]
+        self.n_bout = self.bout_loc.shape[1]
 
     def _target_visit(self):
         '''
