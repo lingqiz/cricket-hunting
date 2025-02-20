@@ -576,7 +576,7 @@ class DataPlot():
                                       interval=10)
 
         # video path
-        file_path = os.path.join('./data/video', ses_obj.name)
+        file_path = os.path.join('./data/Analysis', ses_obj.name, f'session_{ses_obj.session}')
         file_name = 's%d_t%d' % (ses_obj.session, trial_idx) + '.mp4'
 
         if not os.path.exists(file_path):
