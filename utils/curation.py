@@ -5,6 +5,7 @@ import numpy as np
 
 MICE_HUNTING = {}
 MICE_NOSOUND = {}
+MICE_LOUDNESS = {}
 
 def load_data(list_name):
     '''
@@ -35,12 +36,17 @@ def load_data(list_name):
                 if data.session == 30:
                     data.target[:, 6:] += np.array([55, 40]).reshape(2, 1)
 
-            MICE_HUNTING[name] = select_data
-            no_sound = all_data[idx_nosound:]
-            MICE_NOSOUND[name] = no_sound
+            MICE_HUNTING[name] = select_data            
+            MICE_NOSOUND[name] = all_data[idx_nosound:]
+            
+            # loudness manipulation
+            if name == 'p16':                
+                MICE_LOUDNESS[name] = [all_data[i] for i in [16, 20, 24]]
+            if name == 'p18':
+                MICE_LOUDNESS[name] = [all_data[i] for i in [20, 24]]
 
             print(f'{name}: {len(select_data)} hunting sessions, ' +
-                f'{len(no_sound)} no sound sessions')
+                f'{len(all_data[idx_nosound:])} no sound sessions')
 
         # PWK male
         elif name.startswith('p2'):
