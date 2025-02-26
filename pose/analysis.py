@@ -127,9 +127,22 @@ class AnimalPose():
         mouse_center = self.average_point(anchor_points)
         return AnimalPose(xy - mouse_center[np.newaxis, :, :])
 
+    def rotate_angle(self, rot_angle):
+        '''
+        Rotate the pose data by a fixed amount.
+        '''
+        return self.rotate(rot_angle=rot_angle)
+
+    def rotate(self, anchor_points=[Mouse.TAIL_BASE], rot_angle=None, target=-np.pi/2):
+        '''
+        Rotate the pose data so a set of anchor points
+        are aligned with target angle (-y by default).
+        '''
+        return self.rotate_points(self.xy, anchor_points, rot_angle, target)
+
     def compute_angle(self, anchor_points):
         '''
-        Compute the orientation of an anchor point
+        Compute the orientation of a set of anchor points
         assuming the coordinates are centered
         '''
         anchor = self.average_point(anchor_points)
@@ -137,16 +150,12 @@ class AnimalPose():
 
         return angle
 
-    def rotate(self, anchor_points=[Mouse.TAIL_BASE], target=-np.pi/2):
-        '''
-        Rotate the pose data so anchor points
-        are aligned with target angle (-y by default).
-        '''
-        return self.rotate_points(self.xy, anchor_points, target)
-
-    def rotate_points(self, xy, anchor_points=[Mouse.TAIL_BASE], target=-np.pi/2):
-        angle = self.compute_angle(anchor_points)
-        theta = target - angle
+    def rotate_points(self, xy, anchor_points=[Mouse.TAIL_BASE], rot_angle=None, target=-np.pi/2):
+        if rot_angle is None:
+            angle = self.compute_angle(anchor_points)
+            theta = target - angle
+        else:
+            theta = rot_angle * np.ones(self.xy.shape[-1])
 
         # batch rotation matrix
         # Create batched rotation matrices (2, 2, n_data)
@@ -172,10 +181,10 @@ class StopPose():
     SEC_TO_MS = 1000
 
     # Pre and post chirp time to include
-    PRE = 0.80
-    POST = 0.20
+    PRE = 0.60
+    POST = 0.10
 
-    def __init__(self, session):
+    def __init__(self, session, center=True, rotate=True):
         self.session = session
         self.session._load_pose()
 
@@ -192,16 +201,44 @@ class StopPose():
 
         # key points data
         # (n_chirps, n_keypoints, n_frames)
-        keypoints = session.keypoints
-        self.kp = np.stack([keypoints[:, self.index_start[i]:self.index_end[i]]
-                            for i in range(len(self.index_start))], axis=0)
+        self.center = center
+        self.rotate = rotate
+        self.process_keypoints(session)
 
-    def process_kp(self):
+    def _circ_mean(self, angles):
+        '''
+        Compute the circular mean of a set of angles.
+        '''
+        return np.arctan2(np.mean(np.sin(angles)),
+                          np.mean(np.cos(angles)))
+
+    def process_keypoints(self, session):
         '''
         Process keypoint data to AnimalPose objects.
         '''
-        # self.poses = [AnimalPose(kp) for kp in self.kp]
-        pass
+        all_kp = []
+
+        for i in range(self.n_chirps):
+            # key points segment
+            kp = session.keypoints[:, self.index_start[i]:self.index_end[i]]
+
+            if self.center and self.rotate:
+                # center and rotate pose data for each segment
+                kp = AnimalPose(kp).center()
+
+                # rotate the pose data so the body is aligned with the -y direction
+                angles = kp.compute_angle([Mouse.TAIL_BASE])
+                angle = self._circ_mean(angles)
+                target = -np.pi/2
+                kp = kp.rotate(rot_angle=(target - angle)).pose
+
+            elif self.center:
+                kp = AnimalPose(kp).center().pose
+
+            # record each segment
+            all_kp.append(kp)
+
+        self.kp = np.stack(all_kp, axis=0)
 
     def _generate_index(self, index='linear', shift=0):
         n_image = 9
@@ -282,10 +319,24 @@ class StopPose():
                 if frame_idx >= int(self.FR * self.PRE):
                     ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
 
-                ax.set_xlim(0, 1024)
-                ax.set_ylim(0, 1024)
-                ax.invert_yaxis()
-                ax.axis("off")  # Hide axes
+                if self.center:
+                    ax.set_xlim(-512, 512)
+                    ax.set_ylim(-512, 512)
+                else:
+                    ax.set_xlim(0, 1024)
+                    ax.set_ylim(0, 1024)
+
+                if not self.rotate:
+                    ax.invert_yaxis()
+
+                # put a box with no ticks
+                ax.set_xticks([])
+                ax.set_yticks([])
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                for spine in ax.spines.values():
+                    spine.set_visible(True)  # Ensure spines are visible
+                    spine.set_linewidth(1)
 
             # Save the current figure as an image in memory
             fig.tight_layout()
