@@ -220,7 +220,8 @@ class ChirpPose():
 
         for i in range(self.n_chirps):
             # key points segment, skip if out of bounds
-            if self.index_end[i] > session.keypoints.shape[1]:
+            if (self.index_start[i] < 0 or
+                self.index_end[i] > session.keypoints.shape[1]):
                 continue
 
             kp = session.keypoints[:, self.index_start[i]:self.index_end[i]]
