@@ -311,8 +311,11 @@ class SessionData(ArenaMap):
 
         return cv2.resize(frame, (1024, 1024))[:, :, 0]
 
-    def hs_frame(self, index, rgb=True):
-        hs_index = self.hs_index[index]
+    def hs_frame(self, index, rgb=True, native=False):
+        if native:
+            hs_index = index
+        else:
+            hs_index = self.hs_index[index]
 
         if hs_index < 0 or hs_index >= self.hs_length:
             frame = np.zeros(self.hs_shape).astype(np.uint8)

@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
 from enum import IntEnum
 from matplotlib import colormaps
 cmap = colormaps.get_cmap('Spectral')
@@ -162,3 +164,83 @@ class AnimalPose():
         # apply rotation
         rotated = np.einsum('idk, mdk -> mik', rotations, xy)
         return AnimalPose(rotated)
+
+
+class StopPose():
+    '''
+    Class for analyzing pose data around stop (chirp) events.
+    '''
+
+    FR = 120
+    SEC_TO_MS = 1000
+    PRE = 0.75
+    POST = 0.25
+
+    def __init__(self, session):
+        self.session = session
+        self.session._load_pose()
+
+        # chirp index and time in zaber frames
+        chirp_index = np.where(session.chirped == 1)[0]
+        self.chirp_time = session.time[chirp_index]
+        self.n_chirps = len(chirp_index)
+
+        # change to index in hs frames
+        self.chirp_index = session.hs_index[chirp_index]
+        self.index_start = self.chirp_index - int(self.PRE * self.FR)
+        self.index_end = self.chirp_index + int(self.POST * self.FR)
+        self.n_frames = self.index_end[0] - self.index_start[0]
+
+        # key points data
+        # (n_chirps, n_keypoints, n_frames)
+        keypoints = session.keypoints
+        self.kp = np.stack([keypoints[:, self.index_start[i]:self.index_end[i]]
+                            for i in range(len(self.index_start))], axis=0)
+
+    def to_gifs(self, index='linear', shift=0):
+        # Select frames to plot
+        n_image = 9
+
+        if index == 'linear':
+            index = np.arange(n_image) + shift
+        elif index == 'random':
+            index = np.random.choice(len(self.kp), n_image)
+            index = np.sort(index)
+
+        # Create a list of combined frames
+        combined_frames = []
+
+        for frame_idx, frame in range(self.n_frames):
+            fig, axes = plt.subplots(3, 3, figsize=(12, 12))
+
+            # Plot each movie's frame
+            for i, ax in enumerate(axes.flat):
+                frame_index =
+                ax.imshow(hs_video[i, frame], cmap='gray')
+
+                # write out some information
+                if i == 1:
+                    ax.title.set_text('Time %.1f ms' % (frame / fr * sec_to_ms))
+                if i == 4 and frame_idx >= int(pre*fr):
+                    ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
+
+                ax.set_xlim(0, 1024)
+                ax.set_ylim(0, 1024)
+                ax.invert_yaxis()
+                ax.axis("off")  # Hide axes
+
+            # Save the current figure as an image in memory
+            fig.tight_layout()
+            fig.canvas.draw()
+            img = Image.fromarray(np.array(fig.canvas.buffer_rgba()))
+            combined_frames.append(img)
+
+            plt.close(fig)  # Close to free memory
+
+        # Save the combined frames as a single GIF
+        gif_filename = "./pose_movies_%s_%d.gif" % (self.session.name,
+                                                    self.session.session)
+
+        combined_frames[0].save(gif_filename, save_all=True,
+                                append_images=combined_frames[1:],
+                                duration=10, loop=0)
