@@ -197,7 +197,7 @@ class StopPose():
         self.kp = np.stack([keypoints[:, self.index_start[i]:self.index_end[i]]
                             for i in range(len(self.index_start))], axis=0)
 
-    def to_gifs(self, index='linear', shift=0):
+    def movie_to_gifs(self, index='linear', shift=0):
         # Select frames to plot
         n_image = 9
 
@@ -210,18 +210,20 @@ class StopPose():
         # Create a list of combined frames
         combined_frames = []
 
-        for frame_idx, frame in range(self.n_frames):
+        for frame_idx in range(self.n_frames):
             fig, axes = plt.subplots(3, 3, figsize=(12, 12))
 
             # Plot each movie's frame
             for i, ax in enumerate(axes.flat):
-                frame_index =
-                ax.imshow(hs_video[i, frame], cmap='gray')
+                total_index = self.index_start[index[i]] + frame_idx
+                frame = self.session.hs_frame(total_index, native=True)
+
+                ax.imshow(frame, cmap='gray')
 
                 # write out some information
                 if i == 1:
-                    ax.title.set_text('Time %.1f ms' % (frame / fr * sec_to_ms))
-                if i == 4 and frame_idx >= int(pre*fr):
+                    ax.title.set_text('Time %.1f ms' % (frame_idx / self.FR * self.SEC_TO_MS))
+                if frame_idx >= int(self.FR * self.PRE):
                     ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
 
                 ax.set_xlim(0, 1024)
