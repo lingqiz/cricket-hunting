@@ -6,6 +6,15 @@ matplotlib.rcParams["image.origin"] = "lower"
 from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
 from matplotlib.gridspec import GridSpec
+from matplotlib import colormaps
+
+# Create a color map for keypoints
+NUM_POINTS = 37
+KP_COLORS = []
+cmap = colormaps.get_cmap('Spectral')
+for i in range(NUM_POINTS):
+    KP_COLORS.append(cmap(i / (NUM_POINTS - 1)))
+KP_COLORS = np.array(KP_COLORS)
 
 def plot_trajectory(trial, stops, ax):
     # arena and targets
@@ -47,15 +56,15 @@ def plot_trajectory(trial, stops, ax):
     ax.set_xlim(0, 2300)
     ax.set_ylim(-100, 2200)
     ax.set_aspect('equal')
-    
+
     return lc
 
 def plot_trial(trial):
     '''
-    Plot a single trial with detailed 
+    Plot a single trial with detailed
     trajectory information and a summary panel.
     '''
-    stops = trial.stop_data() # get stop (chirp) data    
+    stops = trial.stop_data() # get stop (chirp) data
 
     # Create figure with GridSpec
     fig = plt.figure(figsize=(12, 6))  # Adjust width for new panels
@@ -64,7 +73,7 @@ def plot_trial(trial):
     # Main trajectory plot
     ax = fig.add_subplot(gs[:, 0])  # Occupies all rows of first column
     lc = plot_trajectory(trial, stops, ax)
-    
+
     # Add panels
     ax_text = fig.add_subplot(gs[0, 1])
     ax_line = fig.add_subplot(gs[1, 1])

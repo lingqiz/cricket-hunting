@@ -2,8 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from enum import IntEnum
-from matplotlib import colormaps
-cmap = colormaps.get_cmap('Spectral')
+from utils.plottools import KP_COLORS
 
 class Mouse(IntEnum):
     '''
@@ -57,10 +56,7 @@ class Mouse(IntEnum):
 
     @classmethod
     def colors(cls):
-        plot_colors = [cmap(i / (len(cls) - 1))
-                       for i in range(len(cls))]
-
-        return plot_colors
+        return KP_COLORS
 
     # Define point groups
     @classmethod
@@ -200,8 +196,14 @@ class StopPose():
         self.kp = np.stack([keypoints[:, self.index_start[i]:self.index_end[i]]
                             for i in range(len(self.index_start))], axis=0)
 
-    def movie_to_gifs(self, index='linear', shift=0):
-        # Select frames to plot
+    def process_kp(self):
+        '''
+        Process keypoint data to AnimalPose objects.
+        '''
+        # self.poses = [AnimalPose(kp) for kp in self.kp]
+        pass
+
+    def _generate_index(self, index='linear', shift=0):
         n_image = 9
 
         if index == 'linear':
@@ -209,6 +211,13 @@ class StopPose():
         elif index == 'random':
             index = np.random.choice(len(self.kp), n_image)
             index = np.sort(index)
+
+        return index
+
+    def movie_to_gifs(self, index='linear', shift=0):
+        # Select frames to plot
+        if not isinstance(index, np.ndarray):
+            index = self._generate_index(index, shift)
 
         # Create a list of combined frames
         combined_frames = []
@@ -244,6 +253,50 @@ class StopPose():
 
         # Save the combined frames as a single GIF
         gif_filename = "./pose_movies_%s_%d.gif" % (self.session.name,
+                                                    self.session.session)
+
+        combined_frames[0].save(gif_filename, save_all=True,
+                                append_images=combined_frames[1:],
+                                duration=10, loop=0)
+
+    def pose_to_gifs(self, index='linear', shift=0):
+        # Select frames to plot
+        if not isinstance(index, np.ndarray):
+            index = self._generate_index(index, shift)
+
+        # Create a list of combined frames
+        combined_frames = []
+
+        for frame_idx in range(self.n_frames):
+            fig, axes = plt.subplots(3, 3, figsize=(12, 12), dpi=150)
+
+            # Plot each movie's frame
+            for i, ax in enumerate(axes.flat):
+                pose_frame = self.kp[index[i], :, frame_idx].reshape(-1, 2)
+                ax.scatter(pose_frame[:, 0], pose_frame[:, 1],
+                           c=Mouse.colors(), alpha=0.90, marker='+')
+
+                # write out some information
+                if i == 1:
+                    ax.title.set_text('Time %.1f ms' % (frame_idx / self.FR * self.SEC_TO_MS))
+                if frame_idx >= int(self.FR * self.PRE):
+                    ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
+
+                ax.set_xlim(0, 1024)
+                ax.set_ylim(0, 1024)
+                ax.invert_yaxis()
+                ax.axis("off")  # Hide axes
+
+            # Save the current figure as an image in memory
+            fig.tight_layout()
+            fig.canvas.draw()
+            frame_img = Image.fromarray(np.array(fig.canvas.buffer_rgba()))
+            combined_frames.append(frame_img)
+
+            plt.close(fig)  # Close to free memory
+
+        # Save the combined frames as a single GIF
+        gif_filename = "./keypoint_movies_%s_%d.gif" % (self.session.name,
                                                     self.session.session)
 
         combined_frames[0].save(gif_filename, save_all=True,

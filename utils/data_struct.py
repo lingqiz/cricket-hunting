@@ -11,6 +11,8 @@ from matplotlib import colormaps
 from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI, TRK_CTR, TILE_CENTER, \
     TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, VERT_TILE, TRIG_RADIUS, TILE_DICT
 
+from .plottools import KP_COLORS
+
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -390,13 +392,8 @@ class DataPlot():
         # target frame rate
         self.target_fps = 10
 
-        # create a color map for keypoints
-        num_points = 37
-        kp_colors = []
-        cmap = colormaps.get_cmap('Spectral')
-        for i in range(num_points):
-            kp_colors.append(cmap(i / (num_points - 1)))
-        self.kp_colors = np.array(kp_colors)
+        # color map for keypoints
+        self.kp_colors = KP_COLORS.copy()
 
     def _init_vars(self):
         self.chirp_count = 0
