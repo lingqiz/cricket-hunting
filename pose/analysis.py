@@ -171,10 +171,13 @@ class StopPose():
     Class for analyzing pose data around stop (chirp) events.
     '''
 
+    # Frame rate
     FR = 120
     SEC_TO_MS = 1000
-    PRE = 0.75
-    POST = 0.25
+
+    # Pre and post chirp time to include
+    PRE = 0.80
+    POST = 0.20
 
     def __init__(self, session):
         self.session = session
@@ -211,7 +214,7 @@ class StopPose():
         combined_frames = []
 
         for frame_idx in range(self.n_frames):
-            fig, axes = plt.subplots(3, 3, figsize=(12, 12))
+            fig, axes = plt.subplots(3, 3, figsize=(12, 12), dpi=150)
 
             # Plot each movie's frame
             for i, ax in enumerate(axes.flat):
@@ -234,8 +237,8 @@ class StopPose():
             # Save the current figure as an image in memory
             fig.tight_layout()
             fig.canvas.draw()
-            img = Image.fromarray(np.array(fig.canvas.buffer_rgba()))
-            combined_frames.append(img)
+            frame_img = Image.fromarray(np.array(fig.canvas.buffer_rgba()))
+            combined_frames.append(frame_img)
 
             plt.close(fig)  # Close to free memory
 
