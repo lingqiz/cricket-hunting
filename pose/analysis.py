@@ -171,7 +171,7 @@ class AnimalPose():
         return AnimalPose(rotated)
 
 
-class ChirpPose():
+class StopPose():
     '''
     Class for analyzing pose data around stop (chirp) events.
     '''
