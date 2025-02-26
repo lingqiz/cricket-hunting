@@ -171,7 +171,7 @@ class AnimalPose():
         return AnimalPose(rotated)
 
 
-class StopPose():
+class ChirpPose():
     '''
     Class for analyzing pose data around stop (chirp) events.
     '''
@@ -219,7 +219,10 @@ class StopPose():
         all_kp = []
 
         for i in range(self.n_chirps):
-            # key points segment
+            # key points segment, skip if out of bounds
+            if self.index_end[i] > session.keypoints.shape[1]:
+                continue
+
             kp = session.keypoints[:, self.index_start[i]:self.index_end[i]]
 
             if self.center and self.rotate:
