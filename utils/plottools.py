@@ -17,6 +17,10 @@ for i in range(NUM_POINTS):
 KP_COLORS = np.array(KP_COLORS)
 
 def plot_trajectory(trial, stops, ax):
+    '''
+    Plot trajectory of a single trial with
+    stops and target visits.
+    '''
     # arena and targets
     targets = trial.draw_target(ax, alpha=0.0, draw_hex=True)
     trial.draw_boundary(ax)
