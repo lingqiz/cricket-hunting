@@ -181,7 +181,7 @@ class StopPose():
     SEC_TO_MS = 1000
 
     # Pre and post chirp time to include
-    PRE = 0.60
+    PRE = 0.65
     POST = 0.10
 
     def __init__(self, session, center=True, rotate=True):
