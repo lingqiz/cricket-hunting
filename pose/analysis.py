@@ -218,6 +218,7 @@ class StopPose():
         Process keypoint data to AnimalPose objects.
         '''
         all_kp = []
+        kp_index = []
 
         for i in range(self.n_chirps):
             # key points segment, skip if out of bounds
@@ -226,6 +227,7 @@ class StopPose():
                 continue
 
             kp = session.keypoints[:, self.index_start[i]:self.index_end[i]]
+            kp_index.append(np.arange(self.index_start[i], self.index_end[i]))
 
             if self.center and self.rotate:
                 # center and rotate pose data for each segment
@@ -244,6 +246,7 @@ class StopPose():
             all_kp.append(kp)
 
         self.kp = np.stack(all_kp, axis=0)
+        self.kp_index = np.stack(kp_index, axis=0)
 
     def _generate_index(self, index='linear', shift=0):
         n_image = 9
