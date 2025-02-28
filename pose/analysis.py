@@ -180,13 +180,14 @@ class StopPose():
     FR = 120
     SEC_TO_MS = 1000
 
-    # Pre and post chirp time to include
-    PRE = 0.65
-    POST = 0.10
-
-    def __init__(self, session, center=True, rotate=True):
+    def __init__(self, session, pre=0.80, post=0.20,
+                 center=True, rotate=True):
         self.session = session
         self.session._load_pose()
+
+        # define time window around chirp
+        self.pre = pre
+        self.post = post
 
         # chirp index and time in zaber frames
         chirp_index = np.where(session.chirped == 1)[0]
@@ -195,8 +196,8 @@ class StopPose():
 
         # change to index in hs frames
         self.chirp_index = session.hs_index[chirp_index]
-        self.index_start = self.chirp_index - int(self.PRE * self.FR)
-        self.index_end = self.chirp_index + int(self.POST * self.FR)
+        self.index_start = self.chirp_index - int(self.pre * self.FR)
+        self.index_end = self.chirp_index + int(self.post * self.FR)
         self.n_frames = self.index_end[0] - self.index_start[0]
 
         # key points data
@@ -276,7 +277,7 @@ class StopPose():
                 # write out some information
                 if i == 1:
                     ax.title.set_text('Time %.1f ms' % (frame_idx / self.FR * self.SEC_TO_MS))
-                if frame_idx >= int(self.FR * self.PRE):
+                if frame_idx >= int(self.FR * self.pre):
                     ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
 
                 ax.set_xlim(0, 1024)
@@ -320,7 +321,7 @@ class StopPose():
                 # write out some information
                 if i == 1:
                     ax.title.set_text('Time %.1f ms' % (frame_idx / self.FR * self.SEC_TO_MS))
-                if frame_idx >= int(self.FR * self.PRE):
+                if frame_idx >= int(self.FR * self.pre):
                     ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
 
                 if self.center:
