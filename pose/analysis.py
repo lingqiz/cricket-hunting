@@ -180,7 +180,7 @@ class StopPose():
     FR = 120
     SEC_TO_MS = 1000
 
-    def __init__(self, session, pre=0.80, post=0.20,
+    def __init__(self, session, pre=0.60, post=0.10,
                  center=True, rotate=True):
         self.session = session
         self.session._load_pose()
