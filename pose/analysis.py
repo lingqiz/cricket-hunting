@@ -181,7 +181,7 @@ class StopPose():
     SEC_TO_MS = 1000
 
     def __init__(self, session, pre=0.60, post=0.10,
-                 center=True, rotate=True):
+                 center=True, rotate=True, exclude=None):
         self.session = session
         self.session._load_pose()
 
@@ -204,6 +204,7 @@ class StopPose():
         # (n_chirps, n_keypoints, n_frames)
         self.center = center
         self.rotate = rotate
+        self.exclude = exclude
         self.process_keypoints(session)
 
     def _circ_mean(self, angles):
@@ -237,10 +238,22 @@ class StopPose():
                 angles = kp.compute_angle([Mouse.TAIL_BASE])
                 angle = self._circ_mean(angles)
                 target = -np.pi/2
-                kp = kp.rotate(rot_angle=(target - angle)).pose
+                kp = kp.rotate(rot_angle=(target - angle))
 
             elif self.center:
-                kp = AnimalPose(kp).center().pose
+                kp = AnimalPose(kp).center()
+
+            # exclude keypoints
+            if self.exclude is None:
+                kp = kp.pose
+
+            else:
+                # array of keypoints
+                indicator = np.ones(kp.xy.shape[0], dtype=bool)
+                indicator[self.exclude] = False
+
+                xy_exclude = kp.xy[indicator, :, :]
+                kp = xy_exclude.reshape(-1, kp.xy.shape[-1])
 
             # record each segment
             all_kp.append(kp)
