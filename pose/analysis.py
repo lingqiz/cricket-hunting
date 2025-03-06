@@ -271,15 +271,15 @@ class StopPose():
             index = np.sort(index)
 
         return index
-    
+
     def get_movie(self, stop_index):
         start = self.index_start[stop_index]
         end = self.index_end[stop_index]
-        
+
         frames = []
         for i in range(start, end):
             frames.append(self.session.hs_frame(i, native=True).mean(axis=-1))
-            
+
         return np.array(frames)
 
     def movie_to_gifs(self, index='linear', shift=0):
@@ -292,21 +292,21 @@ class StopPose():
         all_movies = np.zeros((len(index), self.n_frames, *frame_size[:-1])).astype(np.uint8)
         for i in range(len(index)):
             all_movies[i, :, :, :] = self.get_movie(index[i])
-                        
+
         # Save the combined frames as a single GIF
         gif_filename = "./pose_movies_%s_%d.gif" % (self.session.name,
                                                     self.session.session)
-        
+
         plottools.movie_to_gifs(all_movies, self.FR, self.pre, gif_filename)
-        
+
     def pose_to_gifs(self, index='linear', shift=0):
         # Select frames to plot
         if not isinstance(index, np.ndarray):
-            index = self._generate_index(index, shift)            
+            index = self._generate_index(index, shift)
         pose_frames = self.kp[index, :, :]
-        
+
         gif_filename = "./keypoint_movies_%s_%d.gif" % (self.session.name,
                                                     self.session.session)
-        
-        plottools.pose_to_gifs(pose_frames, self.FR, self.pre, 
+
+        plottools.pose_to_gifs(pose_frames, self.FR, self.pre,
                                self.center, self.rotate, gif_filename)
