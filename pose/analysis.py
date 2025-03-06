@@ -199,6 +199,7 @@ class StopPose():
         self.index_start = self.chirp_index - int(self.pre * self.FR)
         self.index_end = self.chirp_index + int(self.post * self.FR)
         self.n_frames = self.index_end[0] - self.index_start[0]
+        self.pose_category = None # pose category for each chirp stop
 
         # key points data
         # (n_chirps, n_keypoints, n_frames)
@@ -213,6 +214,9 @@ class StopPose():
         '''
         return np.arctan2(np.mean(np.sin(angles)),
                           np.mean(np.cos(angles)))
+
+    def set_category(self, category):
+        self.pose_category = category
 
     def process_keypoints(self, session):
         '''
