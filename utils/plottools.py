@@ -130,11 +130,11 @@ def movie_to_gifs(movie_frames, frame_rate, pre, gif_filename):
     n_sub = np.ceil(np.sqrt(movie_frames.shape[0])).astype(int)
     fig, axes = plt.subplots(n_sub, n_sub, figsize=(n_sub * 3, n_sub * 3), dpi=100)
     for frame_idx in range(movie_frames.shape[1]):
-        
+
         # Plot each movie's frame
         for i, ax in enumerate(axes.flat):
             ax.clear()
-            frame = movie_frames[i, frame_idx]            
+            frame = movie_frames[i, frame_idx]
             ax.imshow(frame, cmap='gray')
 
             # write out some information
@@ -169,7 +169,7 @@ def pose_to_gifs(pose_frames, frame_rate, pre, center, rotate, gif_filename):
 
         # Plot each movie's frame
         for i, ax in enumerate(axes.flat):
-            pose_frame = pose_frames[i, :, frame_idx].reshape(-1, 2)                
+            pose_frame = pose_frames[i, :, frame_idx].reshape(-1, 2)
             ax.scatter(pose_frame[:, 0], pose_frame[:, 1],
                         c=KP_COLORS, alpha=0.90, marker='+')
 
