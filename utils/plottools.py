@@ -128,11 +128,12 @@ def movie_to_gifs(movie_frames, frame_rate, pre, gif_filename):
     combined_frames = []
 
     n_sub = np.ceil(np.sqrt(movie_frames.shape[0])).astype(int)
+    fig, axes = plt.subplots(n_sub, n_sub, figsize=(n_sub * 3, n_sub * 3), dpi=100)
     for frame_idx in range(movie_frames.shape[1]):
-        fig, axes = plt.subplots(n_sub, n_sub, figsize=(n_sub * 3, n_sub * 3), dpi=150)
-
+        
         # Plot each movie's frame
         for i, ax in enumerate(axes.flat):
+            ax.clear()
             frame = movie_frames[i, frame_idx]            
             ax.imshow(frame, cmap='gray')
 
@@ -153,8 +154,7 @@ def movie_to_gifs(movie_frames, frame_rate, pre, gif_filename):
         frame_img = Image.fromarray(np.array(fig.canvas.buffer_rgba()))
         combined_frames.append(frame_img)
 
-        plt.close(fig)  # Close to free memory
-
+    plt.close(fig)  # Close to free memory
     combined_frames[0].save(gif_filename, save_all=True,
                             append_images=combined_frames[1:],
                             duration=10, loop=0)
@@ -165,7 +165,7 @@ def pose_to_gifs(pose_frames, frame_rate, pre, center, rotate, gif_filename):
 
     n_sub = np.ceil(np.sqrt(pose_frames.shape[0])).astype(int)
     for frame_idx in range(pose_frames.shape[2]):
-        fig, axes = plt.subplots(n_sub, n_sub, figsize=(n_sub * 3, n_sub * 3), dpi=150)
+        fig, axes = plt.subplots(n_sub, n_sub, figsize=(n_sub * 3, n_sub * 3), dpi=100)
 
         # Plot each movie's frame
         for i, ax in enumerate(axes.flat):
