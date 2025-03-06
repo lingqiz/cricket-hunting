@@ -7,6 +7,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
 from matplotlib.gridspec import GridSpec
 from matplotlib import colormaps
+from PIL import Image
 
 # Create a color map for keypoints
 NUM_POINTS = 37
@@ -15,6 +16,8 @@ cmap = colormaps.get_cmap('Spectral')
 for i in range(NUM_POINTS):
     KP_COLORS.append(cmap(i / (NUM_POINTS - 1)))
 KP_COLORS = np.array(KP_COLORS)
+
+SEC_TO_MS = 1000
 
 def plot_trajectory(trial, stops, ax):
     '''
@@ -119,3 +122,90 @@ def plot_trial(trial):
 
     plt.tight_layout()
     return fig
+
+def movie_to_gifs(movie_frames, frame_rate, pre, gif_filename):
+    # Create a list of combined frames
+    combined_frames = []
+
+    n_sub = np.ceil(np.sqrt(movie_frames.shape[0])).astype(int)
+    for frame_idx in range(movie_frames.shape[1]):
+        fig, axes = plt.subplots(n_sub, n_sub, figsize=(n_sub * 3, n_sub * 3), dpi=150)
+
+        # Plot each movie's frame
+        for i, ax in enumerate(axes.flat):
+            frame = movie_frames[i, frame_idx]            
+            ax.imshow(frame, cmap='gray')
+
+            # write out some information
+            if i == 1:
+                ax.title.set_text('Time %.1f ms' % (frame_idx / frame_rate * SEC_TO_MS))
+            if frame_idx >= int(frame_rate * pre):
+                ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
+
+            ax.set_xlim(0, 1024)
+            ax.set_ylim(0, 1024)
+            ax.invert_yaxis()
+            ax.axis("off")  # Hide axes
+
+        # Save the current figure as an image in memory
+        fig.tight_layout()
+        fig.canvas.draw()
+        frame_img = Image.fromarray(np.array(fig.canvas.buffer_rgba()))
+        combined_frames.append(frame_img)
+
+        plt.close(fig)  # Close to free memory
+
+    combined_frames[0].save(gif_filename, save_all=True,
+                            append_images=combined_frames[1:],
+                            duration=10, loop=0)
+
+def pose_to_gifs(pose_frames, frame_rate, pre, center, rotate, gif_filename):
+    # Create a list of combined frames
+    combined_frames = []
+
+    n_sub = np.ceil(np.sqrt(pose_frames.shape[0])).astype(int)
+    for frame_idx in range(pose_frames.shape[2]):
+        fig, axes = plt.subplots(n_sub, n_sub, figsize=(n_sub * 3, n_sub * 3), dpi=150)
+
+        # Plot each movie's frame
+        for i, ax in enumerate(axes.flat):
+            pose_frame = pose_frames[i, :, frame_idx].reshape(-1, 2)                
+            ax.scatter(pose_frame[:, 0], pose_frame[:, 1],
+                        c=KP_COLORS, alpha=0.90, marker='+')
+
+            # write out some information
+            if i == 1:
+                ax.title.set_text('Time %.1f ms' % (frame_idx / frame_rate * SEC_TO_MS))
+            if frame_idx >= int(frame_rate * pre):
+                ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
+
+            if center:
+                ax.set_xlim(-512, 512)
+                ax.set_ylim(-512, 512)
+            else:
+                ax.set_xlim(0, 1024)
+                ax.set_ylim(0, 1024)
+
+            if not rotate:
+                ax.invert_yaxis()
+
+            # put a box with no ticks
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            for spine in ax.spines.values():
+                spine.set_visible(True)  # Ensure spines are visible
+                spine.set_linewidth(1)
+
+        # Save the current figure as an image in memory
+        fig.tight_layout()
+        fig.canvas.draw()
+        frame_img = Image.fromarray(np.array(fig.canvas.buffer_rgba()))
+        combined_frames.append(frame_img)
+
+        plt.close(fig)  # Close to free memory
+
+    combined_frames[0].save(gif_filename, save_all=True,
+                            append_images=combined_frames[1:],
+                            duration=10, loop=0)

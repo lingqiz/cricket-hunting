@@ -1,7 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
 from enum import IntEnum
+
+import utils.plottools as plottools
 from utils.plottools import KP_COLORS
 
 class Mouse(IntEnum):
@@ -277,100 +277,28 @@ class StopPose():
         if not isinstance(index, np.ndarray):
             index = self._generate_index(index, shift)
 
-        # Create a list of combined frames
-        combined_frames = []
-
-        for frame_idx in range(self.n_frames):
-            fig, axes = plt.subplots(3, 3, figsize=(12, 12), dpi=150)
-
-            # Plot each movie's frame
-            for i, ax in enumerate(axes.flat):
-                total_index = self.index_start[index[i]] + frame_idx
-                frame = self.session.hs_frame(total_index, native=True)
-
-                ax.imshow(frame, cmap='gray')
-
-                # write out some information
-                if i == 1:
-                    ax.title.set_text('Time %.1f ms' % (frame_idx / self.FR * self.SEC_TO_MS))
-                if frame_idx >= int(self.FR * self.pre):
-                    ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
-
-                ax.set_xlim(0, 1024)
-                ax.set_ylim(0, 1024)
-                ax.invert_yaxis()
-                ax.axis("off")  # Hide axes
-
-            # Save the current figure as an image in memory
-            fig.tight_layout()
-            fig.canvas.draw()
-            frame_img = Image.fromarray(np.array(fig.canvas.buffer_rgba()))
-            combined_frames.append(frame_img)
-
-            plt.close(fig)  # Close to free memory
+        # Collect movie frames
+        frame_size = self.session.hs_frame(0, native=True).shape
+        all_movies = np.zeros((len(index), self.n_frames, *frame_size))
+        for i in range(len(index)):
+            for j in range(self.n_frames):
+                total_index = self.index_start[index[i]] + j
+                all_movies[i, j, :, :] = self.session.hs_frame(total_index, native=True)
 
         # Save the combined frames as a single GIF
         gif_filename = "./pose_movies_%s_%d.gif" % (self.session.name,
                                                     self.session.session)
-
-        combined_frames[0].save(gif_filename, save_all=True,
-                                append_images=combined_frames[1:],
-                                duration=10, loop=0)
-
+        
+        plottools.movie_to_gifs(all_movies, self.FR, self.pre, gif_filename)
+        
     def pose_to_gifs(self, index='linear', shift=0):
         # Select frames to plot
         if not isinstance(index, np.ndarray):
-            index = self._generate_index(index, shift)
-
-        # Create a list of combined frames
-        combined_frames = []
-
-        for frame_idx in range(self.n_frames):
-            fig, axes = plt.subplots(3, 3, figsize=(12, 12), dpi=150)
-
-            # Plot each movie's frame
-            for i, ax in enumerate(axes.flat):
-                pose_frame = self.kp[index[i], :, frame_idx].reshape(-1, 2)
-                ax.scatter(pose_frame[:, 0], pose_frame[:, 1],
-                           c=Mouse.colors(), alpha=0.90, marker='+')
-
-                # write out some information
-                if i == 1:
-                    ax.title.set_text('Time %.1f ms' % (frame_idx / self.FR * self.SEC_TO_MS))
-                if frame_idx >= int(self.FR * self.pre):
-                    ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
-
-                if self.center:
-                    ax.set_xlim(-512, 512)
-                    ax.set_ylim(-512, 512)
-                else:
-                    ax.set_xlim(0, 1024)
-                    ax.set_ylim(0, 1024)
-
-                if not self.rotate:
-                    ax.invert_yaxis()
-
-                # put a box with no ticks
-                ax.set_xticks([])
-                ax.set_yticks([])
-                ax.set_xticklabels([])
-                ax.set_yticklabels([])
-                for spine in ax.spines.values():
-                    spine.set_visible(True)  # Ensure spines are visible
-                    spine.set_linewidth(1)
-
-            # Save the current figure as an image in memory
-            fig.tight_layout()
-            fig.canvas.draw()
-            frame_img = Image.fromarray(np.array(fig.canvas.buffer_rgba()))
-            combined_frames.append(frame_img)
-
-            plt.close(fig)  # Close to free memory
-
-        # Save the combined frames as a single GIF
+            index = self._generate_index(index, shift)            
+        pose_frames = self.kp[index, :, :]
+        
         gif_filename = "./keypoint_movies_%s_%d.gif" % (self.session.name,
                                                     self.session.session)
-
-        combined_frames[0].save(gif_filename, save_all=True,
-                                append_images=combined_frames[1:],
-                                duration=10, loop=0)
+        
+        plottools.pose_to_gifs(pose_frames, self.FR, self.pre, 
+                               self.center, self.rotate, gif_filename)
