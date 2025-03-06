@@ -177,7 +177,10 @@ def pose_to_gifs(pose_frames, frame_rate, pre, center, rotate, gif_filename):
             if i == 1:
                 ax.title.set_text('Time %.1f ms' % (frame_idx / frame_rate * SEC_TO_MS))
             if frame_idx >= int(frame_rate * pre):
-                ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
+                if center:
+                    ax.scatter(465, 465, s=400, marker='s', color='tab:blue')
+                else:
+                    ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
 
             if center:
                 ax.set_xlim(-512, 512)
