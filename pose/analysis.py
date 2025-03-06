@@ -278,7 +278,7 @@ class StopPose():
         
         frames = []
         for i in range(start, end):
-            frames.append(self.session.hs_frame(i, native=True))
+            frames.append(self.session.hs_frame(i, native=True).mean(axis=-1))
             
         return np.array(frames)
 
@@ -289,7 +289,7 @@ class StopPose():
 
         # Collect movie frames
         frame_size = self.session.hs_frame(0, native=True).shape
-        all_movies = np.zeros((len(index), self.n_frames, *frame_size)).astype(np.uint8)
+        all_movies = np.zeros((len(index), self.n_frames, *frame_size[:-1])).astype(np.uint8)
         for i in range(len(index)):
             all_movies[i, :, :, :] = self.get_movie(index[i])
                         
