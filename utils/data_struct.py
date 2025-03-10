@@ -185,7 +185,7 @@ class SessionData(ArenaMap):
 
         # cricket catch
         self.n_catch = np.sum(self.triggered)
-        self.trigger_time = np.where(self.triggered == 1)[0]
+        self.trigger_index = np.where(self.triggered == 1)[0]
 
     def _smooth_trajectory(self):
         # sampling rate = 17.8 Hz
@@ -333,28 +333,28 @@ class SessionData(ArenaMap):
 
     # 30 sec ISI * average frame rate
     def _trial_index(self, trial_idx, prepend=None, append=0, eos=False):
-        trigger_time = np.where(self.triggered == 1)[0]
+        trigger_index = np.where(self.triggered == 1)[0]
         session_length = self.time.shape[0]
 
         if prepend is None:
             prepend = int(self.frame_rate * ISI)
 
         # if no cricket catch
-        if len(trigger_time) == 0:
+        if len(trigger_index) == 0:
             return 0, session_length
 
         # with cricket catch
         if eos:
-            start_idx = trigger_time[-1] + prepend
+            start_idx = trigger_index[-1] + prepend
             n_frame = session_length - start_idx
 
         else:
             if trial_idx == 0:
                 start_idx = 0
-                n_frame = trigger_time[0] + append
+                n_frame = trigger_index[0] + append
             else:
-                start_idx = trigger_time[trial_idx - 1] + prepend
-                n_frame = trigger_time[trial_idx] - start_idx + append
+                start_idx = trigger_index[trial_idx - 1] + prepend
+                n_frame = trigger_index[trial_idx] - start_idx + append
 
             # check if exceed end of session
             if start_idx + n_frame > session_length:

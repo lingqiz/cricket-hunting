@@ -189,10 +189,12 @@ class StopPose():
         self.pre = pre
         self.post = post
 
-        # chirp index and time in zaber frames
+        # chirp / release index and time in zaber frames
         chirp_index = np.where(session.chirped == 1)[0]
         self.chirp_time = session.time[chirp_index]
         self.n_chirps = len(chirp_index)
+        trigger_index = session.trigger_index
+        self.trigger_time = session.time[trigger_index]
 
         # change to index in hs frames
         self.chirp_index = session.hs_index[chirp_index]
