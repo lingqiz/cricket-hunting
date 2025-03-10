@@ -4,6 +4,8 @@ from enum import IntEnum
 import utils.plottools as plottools
 from utils.plottools import KP_COLORS
 
+from utils.data_loader import TRIG_RADIUS
+
 class Mouse(IntEnum):
     '''
     Define the keypoint indices for a mouse.
@@ -189,10 +191,17 @@ class StopPose():
         self.pre = pre
         self.post = post
 
-        # chirp / release index and time in zaber frames
+        # chirp index, time in zaber frames, and location
         chirp_index = np.where(session.chirped == 1)[0]
         self.chirp_time = session.time[chirp_index]
         self.n_chirps = len(chirp_index)
+
+        x = session.x[chirp_index]
+        y = session.y[chirp_index]
+        self.chirp_loc = np.stack([x, y], axis=0)
+        self._tile_check()
+
+        # cricket release
         trigger_index = session.trigger_index
         self.trigger_time = session.time[trigger_index]
 
@@ -216,6 +225,20 @@ class StopPose():
         '''
         return np.arctan2(np.mean(np.sin(angles)),
                           np.mean(np.cos(angles)))
+
+    def _tile_check(self, threshold_mul=1.2):
+        '''
+        Mark if the chirp location is close to a cricket tile,
+        using a more lenient threshold than the trigger radius.
+        '''
+        target = self.session.target
+        tile_check = np.zeros(self.chirp_loc.shape[-1]).astype(bool)
+        for idx in range(target.shape[-1]):
+            t = target[:, idx].reshape(2, -1)
+            dist = np.linalg.norm(self.chirp_loc - t, axis=0)
+            tile_check = np.logical_or(tile_check, dist <= threshold_mul * TRIG_RADIUS)
+
+        self.tile_check = tile_check
 
     def set_category(self, category):
         self.pose_category = category
