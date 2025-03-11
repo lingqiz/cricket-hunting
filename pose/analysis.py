@@ -191,19 +191,12 @@ class StopPose():
         self.pre = pre
         self.post = post
 
-        # chirp index, time in zaber frames, and location
-        chirp_index = np.where(session.chirped == 1)[0]
-        self.chirp_time = session.time[chirp_index]
-        self.n_chirps = len(chirp_index)
-
-        x = session.x[chirp_index]
-        y = session.y[chirp_index]
-        self.chirp_loc = np.stack([x, y], axis=0)
-        self._tile_check()
-
-        # cricket release
+        # cricket release time
         trigger_index = session.trigger_index
         self.trigger_time = session.time[trigger_index]
+
+        # chirp index, time in zaber frames, and location
+        chirp_index = np.where(session.chirped == 1)[0]
 
         # change to index in hs frames
         self.chirp_index = session.hs_index[chirp_index]
@@ -211,6 +204,17 @@ class StopPose():
         self.index_end = self.chirp_index + int(self.post * self.FR)
         self.n_frames = self.index_end[0] - self.index_start[0]
         self.pose_category = None # pose category for each chirp stop
+        self._frame_check()
+
+        # chirp time and location
+        chirp_index = chirp_index[self.frame_bound]
+        self.chirp_time = session.time[chirp_index]
+        self.n_chirps = len(chirp_index)
+
+        x = session.x[chirp_index]
+        y = session.y[chirp_index]
+        self.chirp_loc = np.stack([x, y], axis=0)
+        self._tile_check()
 
         # key points data
         # (n_chirps, n_keypoints, n_frames)
@@ -225,6 +229,17 @@ class StopPose():
         '''
         return np.arctan2(np.mean(np.sin(angles)),
                           np.mean(np.cos(angles)))
+
+    def _frame_check(self):
+        '''
+        Check if the chirp location is within the frame boundaries.
+        '''
+        self.frame_bound = np.logical_and(
+            self.index_start >= 0,
+            self.index_end <= self.session.keypoints.shape[1])
+
+        self.index_start = self.index_start[self.frame_bound]
+        self.index_end = self.index_end[self.frame_bound]
 
     def _tile_check(self, threshold_mul=1.2):
         '''
