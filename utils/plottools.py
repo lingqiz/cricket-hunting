@@ -127,45 +127,45 @@ def plot_trial(trial):
 def movie_to_gifs(movie_frames, frame_rate, pre, gif_filename):
     n_sub = np.ceil(np.sqrt(movie_frames.shape[0])).astype(int)
     fig, axes = plt.subplots(n_sub, n_sub, figsize=(n_sub * 3, n_sub * 3), dpi=150)
-    
+
     # Create a temporary directory for frames
-    with tempfile.TemporaryDirectory() as temp_dir:        
+    with tempfile.TemporaryDirectory() as temp_dir:
         frame_paths = []
-        
+
         for frame_idx in range(movie_frames.shape[1]):
             for i, ax in enumerate(axes.flat):
                 ax.clear()
                 frame = movie_frames[i, frame_idx]
                 ax.imshow(frame, cmap='gray')
-                
+
                 # Add frame title and markers
                 if i == 1:
                     ax.title.set_text('Time %.1f ms' % (frame_idx / frame_rate * SEC_TO_MS))
                 if frame_idx >= int(frame_rate * pre):
                     ax.scatter(975, 975, s=400, marker='s', color='tab:blue')
-                
+
                 ax.set_xlim(0, 1024)
                 ax.set_ylim(0, 1024)
                 ax.invert_yaxis()
                 ax.axis("off")  # Hide axes
-            
+
             # Save the current figure as an image file
             fig.tight_layout()
             fig.canvas.draw()
             frame_img = Image.fromarray(np.array(fig.canvas.buffer_rgba()))
-            
+
             # Save to temporary directory
             frame_path = os.path.join(temp_dir, f"frame_{frame_idx:04d}.png")
             frame_img.save(frame_path)
             frame_paths.append(frame_path)
-        
+
         # Load all saved frames and create the final GIF
         images = [Image.open(fp) for fp in frame_paths]
         images[0].save(gif_filename, save_all=True, append_images=images[1:], duration=10, loop=0)
-    
+
     plt.close(fig)  # Close to free memory
 
-def pose_to_gifs(pose_frames, frame_rate, pre, center, rotate, gif_filename):
+def pose_to_gifs(pose_frames, frame_rate, pre, center, rotate, gif_filename, exclude_points=None):
     # Create a list of combined frames
     combined_frames = []
 
@@ -176,8 +176,15 @@ def pose_to_gifs(pose_frames, frame_rate, pre, center, rotate, gif_filename):
         # Plot each movie's frame
         for i, ax in enumerate(axes.flat):
             pose_frame = pose_frames[i, :, frame_idx].reshape(-1, 2)
-            ax.scatter(pose_frame[:, 0], pose_frame[:, 1],
-                        c=KP_COLORS, alpha=0.90, marker='+')
+
+            for j in range(pose_frame.shape[0]):
+                # exclude points
+                if exclude_points is not None and j in exclude_points:
+                    continue
+
+                # plot the keypoints
+                ax.scatter(pose_frame[j, 0], pose_frame[j, 1],
+                           c=KP_COLORS[j], alpha=0.90, marker='+')
 
             # write out some information
             if i == 1:

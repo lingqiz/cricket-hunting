@@ -343,7 +343,7 @@ class StopPose():
 
         plottools.movie_to_gifs(all_movies, self.FR, self.pre, gif_filename)
 
-    def pose_to_gifs(self, index='linear', shift=0):
+    def pose_to_gifs(self, index='linear', shift=0, exclude_points=None):
         # Select frames to plot
         if not isinstance(index, np.ndarray):
             index = self._generate_index(index, shift)
@@ -353,4 +353,5 @@ class StopPose():
                                                     self.session.session)
 
         plottools.pose_to_gifs(pose_frames, self.FR, self.pre,
-                               self.center, self.rotate, gif_filename)
+                               self.center, self.rotate, gif_filename,
+                               exclude_points)
