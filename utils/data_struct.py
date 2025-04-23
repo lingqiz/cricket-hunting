@@ -446,7 +446,7 @@ class DataPlot():
         self.axs[1].invert_xaxis()
 
         # add an indicator for chirp
-        self.ind_right = self.axs[1].scatter(50, 50, s=625, marker='s', color='tab:blue', label='Chirp')
+        self.ind_right = self.axs[1].scatter(50, 50, s=625, marker='s', color='g', label='Chirp')
         self.ind_right.set_visible(False)
 
         # HIGH RES VIDEO
@@ -455,7 +455,7 @@ class DataPlot():
         self.axs[2].set_ylim(0, 1024)
         self.axs[2].invert_yaxis()
 
-        self.ind_hs = self.axs[2].scatter(974, 974, s=625, marker='s', color='tab:blue', label='Chirp')
+        self.ind_hs = self.axs[2].scatter(974, 974, s=625, marker='s', color='g', label='Chirp')
         self.ind_hs.set_visible(False)
 
         # draw keypoints
