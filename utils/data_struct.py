@@ -727,6 +727,15 @@ class StopData(ArenaMap):
         self.bout_start = np.array(bout_start)
         self.bout_end = np.array(bout_end)
 
+        # if bout is a cricket tile check
+        self.bout_check = np.zeros(self.bout_loc.shape[1])
+        for idx in range(self.bout_loc.shape[1]):
+            dist = np.linalg.norm(self.target - self.bout_loc[:, idx].reshape(-1, 1), axis=0)
+            if np.any(dist <= TRIG_RADIUS):
+                check_index = np.where(dist <= TRIG_RADIUS)[0][0]
+                if check_index != self.start_target:
+                    self.bout_check[idx] = check_index
+
     def delta_distance(self, bout=False):
         '''
         Distance of movement between stops
