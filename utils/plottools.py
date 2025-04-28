@@ -20,27 +20,52 @@ KP_COLORS = np.array(KP_COLORS)
 
 SEC_TO_MS = 1000
 
-def plot_trajectory(trial, stops, ax):
+def plot_arena(trial, stops, ax, full_arena=False):
+    '''
+    Plot arena with target visits and chirp locations.
+    '''
+    # arena and targets
+    if full_arena:
+        targets = trial.draw_target(ax, alpha=0.2, draw_hex=False)
+        trial.draw_arena(ax, alpha=0.2)
+    else:
+        targets = trial.draw_target(ax, alpha=0.0, draw_hex=True)
+
+    trial.draw_boundary(ax)
+
+    # start and end tiles
+    if stops.start_target is not None:
+        targets[stops.start_target].set_facecolor('g')
+        targets[stops.start_target].set_alpha(0.75)
+
+    targets[stops.end_target].set_facecolor('r')
+    targets[stops.end_target].set_alpha(0.75)
+
+    # axis format
+    ax.set_xlabel('X (mm)')
+    ax.set_ylabel('Y (mm)')
+    ax.set_xlim(0, 2300)
+    ax.set_ylim(-100, 2200)
+    ax.set_aspect('equal')
+
+    return targets
+
+def plot_trajectory(trial, stops, ax, full_arena=False):
     '''
     Plot trajectory of a single trial with
     stops and target visits.
     '''
-    # arena and targets
-    targets = trial.draw_target(ax, alpha=0.0, draw_hex=True)
-    trial.draw_boundary(ax)
+    targets = plot_arena(trial, stops, ax, full_arena)
 
     # targets and tile visits
     for idx in range(len(targets)):
         if stops.target_visit[idx]:
+            if idx == stops.start_target or \
+                idx == stops.end_target:
+                 continue
+
             targets[idx].set_facecolor('orange')
             targets[idx].set_alpha(0.6)
-
-    if stops.start_target is not None:
-        targets[stops.start_target].set_facecolor('g')
-        targets[stops.start_target].set_alpha(0.6)
-
-    targets[stops.end_target].set_facecolor('r')
-    targets[stops.end_target].set_alpha(0.6)
 
     # plot the trajectory with changing color
     points = np.array([trial.x, trial.y]).T.reshape(-1, 1, 2)
@@ -67,7 +92,7 @@ def plot_trajectory(trial, stops, ax):
 
     return lc
 
-def plot_trial(trial):
+def plot_trial(trial, full_arena=False):
     '''
     Plot a single trial with detailed
     trajectory information and a summary panel.
@@ -80,7 +105,7 @@ def plot_trial(trial):
 
     # Main trajectory plot
     ax = fig.add_subplot(gs[:, 0])  # Occupies all rows of first column
-    lc = plot_trajectory(trial, stops, ax)
+    lc = plot_trajectory(trial, stops, ax, full_arena)
 
     # Add panels
     ax_text = fig.add_subplot(gs[0, 1])
