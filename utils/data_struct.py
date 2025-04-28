@@ -9,7 +9,7 @@ from scipy.signal import butter, filtfilt
 from matplotlib import colormaps
 
 from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI, TRK_CTR, TILE_CENTER, \
-    TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, VERT_TILE, TRIG_RADIUS, TILE_DICT
+    TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, VERT_TILE, TRIG_RADIUS, TILE_DICT, NAME_DICT
 
 from .plottools import KP_COLORS
 
@@ -85,7 +85,7 @@ class ArenaMap():
 
         # write index on the tile
         if label:
-            plot_ax.text(center[0], center[1], str(index),
+            plot_ax.text(center[0], center[1], NAME_DICT[index],
                          fontsize=8, ha='center', va='center')
 
     def draw_arena(self, plot_ax, alpha=1, label=False):

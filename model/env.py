@@ -17,9 +17,6 @@ class Modulo(ArenaMap):
         # recompute boundary information
         self._init_boundary()
 
-        self._init_target()
-        self.current = self.target[:, self.target_count].reshape([2, -1])
-
         # auditory information
         # dB SPL
         self.base = 73
@@ -28,44 +25,11 @@ class Modulo(ArenaMap):
         # ref distance (mm)
         self.dr = 100
 
-    def _init_target(self, n_target=16, stratified=True):
-        self.n_target = n_target
-        # n_tiles choose n
-        if stratified:
-            n_split = np.floor(self.n_tiles / n_target).astype(int)
-            self.target_idx = np.concatenate([np.random.choice(range(i * n_split, (i + 1) * n_split),
-                                                        1, replace=False) for i in range(n_target)])
-            np.random.shuffle(self.target_idx)
-
-        else:
-            self.target_idx = np.random.choice(self.n_tiles, n_target, replace=False)
-
-        # target coordinates
-        self.target = self.tiles[:, self.target_idx]
-        self.target_count = 0
-
     def sample_tile(self):
         return self.tiles[:, np.random.choice(self.n_tiles, 1, replace=False)]
 
     def get_tile(self, index):
         return self.tiles[:, index].reshape([2, -1])
-
-    def draw_current(self, plot_ax):
-        plot_ax.plot(self.current[0], self.current[1], 'gx')
-
-    def check_capture(self, pos):
-        dist = self.distance(pos)
-
-        if dist <= TRIG_RADIUS:
-            self.capture()
-            return True
-
-        return False
-
-    def capture(self):
-        self.target_count += 1
-        if self.target_count < self.target.shape[1]:
-            self.current = self.target[:, self.target_count].reshape([2, -1])
 
     def distance(self, pos):
         '''
@@ -84,6 +48,53 @@ class Modulo(ArenaMap):
             dist = self.distance(pos)
 
         return self.base - self.bg - 20 * np.log10((dist + 10) / self.dr)
+
+class ModuloData(Modulo):
+    def __init__(self, target):
+        super().__init__()
+
+        # self._init_target()
+        # self.current = self.target[:, self.target_count].reshape([2, -1])
+
+class ModuloSim(Modulo):
+    def __init__(self):
+        super().__init__()
+
+        self._init_target()
+        self.current = self.target[:, self.target_index].reshape([2, -1])
+
+    def _init_target(self, n_target=16, stratified=True):
+        self.n_target = n_target
+        # n_tiles choose n
+        if stratified:
+            n_split = np.floor(self.n_tiles / n_target).astype(int)
+            self.target_idx = np.concatenate([np.random.choice(range(i * n_split, (i + 1) * n_split),
+                                                        1, replace=False) for i in range(n_target)])
+            np.random.shuffle(self.target_idx)
+
+        else:
+            self.target_idx = np.random.choice(self.n_tiles, n_target, replace=False)
+
+        # target coordinates
+        self.target = self.tiles[:, self.target_idx]
+        self.target_index = 0
+
+    def draw_current(self, plot_ax):
+        plot_ax.plot(self.current[0], self.current[1], 'gx')
+
+    def check_capture(self, pos):
+        dist = self.distance(pos)
+
+        if dist <= TRIG_RADIUS:
+            self.capture()
+            return True
+
+        return False
+
+    def capture(self):
+        self.target_index += 1
+        if self.target_index < self.target.shape[1]:
+            self.current = self.target[:, self.target_index].reshape([2, -1])
 
     def sound_volume(self, dist=-1, pos=None):
         '''

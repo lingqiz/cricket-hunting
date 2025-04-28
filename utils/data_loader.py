@@ -37,6 +37,7 @@ TILE_NAMES = [
     "Q1"]
 
 TILE_DICT = {name: idx for idx, name in enumerate(TILE_NAMES)}
+NAME_DICT = {idx: name for idx, name in enumerate(TILE_NAMES)}
 
 # 30 sec ISI
 ISI = 30

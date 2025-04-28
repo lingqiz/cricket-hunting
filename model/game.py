@@ -3,7 +3,7 @@ import pathlib, os
 import math
 import numpy as np
 import time
-from .env import Modulo
+from .env import ModuloSim
 from .agent import GameAgent
 from utils.data_loader import TILE_RAD_MM
 PKG_ROOT = pathlib.Path(__file__).parent.resolve()
@@ -12,7 +12,7 @@ PKG_ROOT = pathlib.Path(__file__).parent.resolve()
 class ModuloGame():
     def __init__(self, screen_size=1080, debug=False):
         # init arena and agent
-        self.arena = Modulo()
+        self.arena = ModuloSim()
         self.agent = GameAgent(self.arena)
 
         # init sound
@@ -116,7 +116,7 @@ class ModuloGame():
         self.screen.blit(timer_text, (10, self.window_size - 45))
 
     def _score_text(self):
-        score = self.arena.target_count
+        score = self.arena.target_index
         score_text = self.score_font.render(f'Capture: {score}', True, self.text_color)
         self.screen.blit(score_text, (self.window_size - 100, 10))
 
