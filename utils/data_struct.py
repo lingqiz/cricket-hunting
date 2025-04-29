@@ -72,7 +72,7 @@ class ArenaMap():
 
     def check_boundary(self, pos):
         # check if the position is within the boundary
-        return np.all(self.A.T @ pos + self.b <= 0)
+        return np.all(self.A.T @ pos + self.b <= 0, axis=0)
 
     def _draw_hex(self, plot_ax, center, alpha=1,
                   label=False, index=None):

@@ -7,8 +7,8 @@ class Modulo(ArenaMap):
         super().__init__()
 
         # sound model: 'polynomial', 'logrithmic'
-        self.sound_model = 'polynomial'
         self.coeff = np.load('./data/loudness_fit.npy')
+        self.sound_model = 'logrithmic'
 
         # arena information
         self.tile_center = ccf_map()
@@ -46,13 +46,13 @@ class Modulo(ArenaMap):
         '''
         Calculate the sound level (dB)
         '''
-        # add 10 mm to distance to avoid log(0)
+        # add fix base distance (25 mm) to avoid log(0)
 
         if np.any(dist == -1):
             dist = self.distance(pos)
 
         if self.sound_model == 'logarithmic':
-            return self.base - self.bg - 20 * np.log10((dist + 10) / self.dr)
+            return self.base - self.bg - 20 * np.log10((dist + 25) / self.dr)
 
         elif self.sound_model == 'polynomial':
             return np.polyval(self.coeff, dist)
@@ -66,7 +66,10 @@ class ModuloData(Modulo):
         self.current = current
 
     def draw_current(self, plot_ax):
-        plot_ax.plot(self.current[0], self.current[1], 'gx')
+        plot_ax.plot(self.current[0], self.current[1], 'rx')
+
+    def update_current(self, pos):
+        self.current = pos
 
 
 class ModuloSim(Modulo):
