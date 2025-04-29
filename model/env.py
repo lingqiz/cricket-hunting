@@ -8,7 +8,7 @@ class Modulo(ArenaMap):
 
         # sound model: 'polynomial', 'logrithmic'
         self.coeff = np.load('./data/loudness_fit.npy')
-        self.sound_model = 'logrithmic'
+        self.sound_model = 'logarithmic'
 
         # arena information
         self.tile_center = ccf_map()
