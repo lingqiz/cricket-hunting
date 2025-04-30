@@ -45,8 +45,8 @@ class BayesMap:
         self.inbnd = torch.tensor(inbnd, dtype=torch.float32).reshape(self.gridshape)
 
         # likehood model
-        self.exp = 1.5
-        self.sigma = 15
+        self.exp = 1.0
+        self.sigma = 20
 
     def init(self, current, target=None):
         self.Z = torch.zeros_like(self.Z)
@@ -128,7 +128,7 @@ class BayesMap:
             ax = fig.add_subplot(111)
 
         self.plot_map(ax, self.X, self.Y, log_l)
-        ax.plot(loc[0], loc[1], 'x', color='orange')
+        ax.plot(loc[0], loc[1], 'o', color='orange')
         ax.plot(self.env.current[0],
                 self.env.current[1], 'ro')
 
