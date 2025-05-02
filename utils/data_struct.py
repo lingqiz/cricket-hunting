@@ -353,7 +353,7 @@ class SessionData(ArenaMap):
                 start_idx = 0
                 n_frame = trigger_index[0] + append
             else:
-                start_idx = trigger_index[trial_idx - 1] + prepend
+                start_idx = np.min(np.where(self.chirp_loc == trial_idx)[0])
                 n_frame = trigger_index[trial_idx] - start_idx + append
 
             # check if exceed end of session
@@ -736,7 +736,7 @@ class StopData(ArenaMap):
         self.bout_end = np.array(bout_end)
 
         # if bout is a cricket tile check
-        self.bout_check = np.zeros(self.bout_loc.shape[1])
+        self.bout_check = np.zeros(self.bout_loc.shape[1]) - 1
         for idx in range(self.bout_loc.shape[1]):
             dist = np.linalg.norm(self.target - self.bout_loc[:, idx].reshape(-1, 1), axis=0)
             if np.any(dist <= TRIG_RADIUS):
