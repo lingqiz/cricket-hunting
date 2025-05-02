@@ -111,8 +111,10 @@ class BayesMap:
         # update the map
         if mode == 'integrate':
             self.Z += log_l
+
         elif mode == 'current':
             self.Z = log_l
+
         else:
             raise ValueError('Unknown mode: {}'.format(mode))
 
