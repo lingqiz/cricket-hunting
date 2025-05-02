@@ -283,7 +283,7 @@ class SessionData(ArenaMap):
         return self._construct_trial(self.n_catch, eos=True)
 
     def _construct_trial(self, trial_idx, eos=False):
-        start_idx, n_frame = self._trial_index(trial_idx, eos=eos)
+        start_idx, n_frame = self._trial_index(trial_idx, append=1, eos=eos)
         end_idx = start_idx + n_frame
 
         return TrialData(self, self.name, self.session, trial_idx, self.time[start_idx:end_idx],
@@ -659,6 +659,7 @@ class StopData(ArenaMap):
         self.target = target
         self.target_visit = np.zeros(target.shape[1])
         self.end_target = trial_index
+        self.end_loc = target[:, trial_index]
         self._target_visit()
 
         # calculate stop bout based on
@@ -715,12 +716,19 @@ class StopData(ArenaMap):
         for idx in range(1, self.loc.shape[1]):
             if np.linalg.norm(self.loc[:, idx] - bout_loc[bout_index]) <= threshold:
                 bout_end[bout_index] = self.t[idx]
-
             else:
                 bout_index += 1
                 bout_loc.append(self.loc[:, idx])
                 bout_start.append(self.t[idx])
                 bout_end.append(self.t[idx])
+
+        # check if last bout not within target threshold
+        if np.linalg.norm(bout_loc[-1] - self.end_loc) > TRIG_RADIUS:
+            # add last bout (cricket catch)
+            bout_index += 1
+            bout_loc.append(self.loc[:, -1])
+            bout_start.append(self.t[-1])
+            bout_end.append(self.t[-1])
 
         # convert to numpy array
         self.bout_loc = np.array(bout_loc).T
