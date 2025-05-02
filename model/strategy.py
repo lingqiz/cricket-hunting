@@ -100,7 +100,7 @@ class BayesMap:
                            torch.tensor(p, dtype=torch.float32))
         return log_l
 
-    def step(self, m, p):
+    def step(self, m, p, mode='integrate'):
         '''
         Update the map with the measurement m
         at position p
@@ -109,9 +109,16 @@ class BayesMap:
         log_l = self.log_l(m, p)
 
         # update the map
-        self.Z += log_l
+        if mode == 'integrate':
+            self.Z += log_l
+        elif mode == 'current':
+            self.Z = log_l
+        else:
+            raise ValueError('Unknown mode: {}'.format(mode))
 
-    def stop_step(self, p):
+        return
+
+    def stop_step(self, p, mode='integrate'):
         '''
         Update the map with the measurement m
         at position p
@@ -120,7 +127,8 @@ class BayesMap:
         m = self.env.sound_level(pos=p)
 
         self.step(torch.tensor(m, dtype=torch.float32),
-                  torch.tensor(p, dtype=torch.float32))
+                  torch.tensor(p, dtype=torch.float32),
+                  mode=mode)
 
     def plot_llhd(self, loc, log_l, ax=None):
         if ax is None:
