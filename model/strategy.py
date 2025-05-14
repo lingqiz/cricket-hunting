@@ -15,7 +15,7 @@ class BayesMap:
         plt.colorbar(c, fraction=0.042, pad=0.05)
         ax.set_aspect('equal')
 
-    def __init__(self, x_range=(0, 2300), y_range=(-100, 2200), n_step=25):
+    def __init__(self, x_range=(0, 2300), y_range=(-100, 2200), n_step=25, n_chunk=256):
         '''
         Initialize the map
         '''
@@ -27,8 +27,8 @@ class BayesMap:
                                         current=None)
 
         # map grid
-        self.x = torch.arange(0, 2300, 25, dtype=torch.float32)
-        self.y = torch.arange(-100, 2200, 25, dtype=torch.float32)
+        self.x = torch.arange(*x_range, n_step, dtype=torch.float32)
+        self.y = torch.arange(*y_range, n_step, dtype=torch.float32)
         self.dx = self.x[1] - self.x[0]
         self.dy = self.y[1] - self.y[0]
 
@@ -48,6 +48,11 @@ class BayesMap:
         self.exp = 1.0
         self.sigma = 20
 
+        # chunk area size for computing probability
+        chunk_ratio = self.inbnd.sum() / self.inbnd.numel() / n_chunk
+        self.chunk_area = chunk_ratio * (x_range[1] - x_range[0]) * (y_range[1] - y_range[0])
+        self.chunk_rad = torch.sqrt(self.chunk_area / np.pi)
+
     def init(self, current, target=None):
         self.Z = torch.zeros_like(self.Z)
 
@@ -66,6 +71,19 @@ class BayesMap:
             return norm_Z / (torch.sum(norm_Z) * self.dx * self.dy)
 
         return norm_Z / (torch.sum(norm_Z))
+
+    def prob_loc(self, loc):
+        '''
+        Compute the probability of a location
+        '''
+        prob_map = self.prob_map(density=False)
+
+        loc = loc.reshape([2, 1])
+        dist = torch.norm(self.xy - loc, dim=0)
+        mask = (dist <= self.chunk_rad).reshape(self.gridshape)
+        bound_ratio = self.inbnd[mask].sum() / mask.sum()
+
+        return prob_map[mask].sum() / bound_ratio
 
     def loudness(self, dist):
         '''

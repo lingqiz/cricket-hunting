@@ -695,9 +695,10 @@ class StopData(ArenaMap):
 
         return np.sum(visit_ind).astype(int)
 
-    def _stop_bout(self, threshold=10):
+    def _stop_bout(self, threshold=TRIG_RADIUS*2):
         '''
         Compute chirp bout based on the distance threshold
+        TRIG_RADIUS * 2 ~= roughly the size of a tile
         '''
         # if no stop in trial
         if self.t.size == 0:
