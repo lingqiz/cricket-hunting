@@ -523,7 +523,7 @@ class DataPlot():
 
                 self._check_tile_visit(np.array([ses_obj.x[i], ses_obj.y[i]]))
 
-                self.axs[0].scatter(ses_obj.x[i], ses_obj.y[i], s=50, marker='o',
+                self.axs[0].scatter(ses_obj.x[i], ses_obj.y[i], s=64, marker='o',
                                     color=self.select_color(self.chirp_count - 1))
 
             if ses_obj.triggered[i] == 1:
