@@ -19,6 +19,7 @@ import matplotlib.animation as animation
 from matplotlib import patches
 matplotlib.rcParams["image.origin"] = "lower"
 
+
 class ArenaMap():
 
     def __init__(self):
@@ -80,7 +81,7 @@ class ArenaMap():
             center, numVertices=6,
             radius=TILE_RAD_MM,
             orientation=TILE_ANGLE,
-            facecolor='w', edgecolor='g',
+            facecolor='none', edgecolor='g',
             lw=2, alpha=alpha))
 
         # write index on the tile
@@ -391,224 +392,6 @@ class SessionData(ArenaMap):
                 DataPlot().trial_video(self, n_trigger, eos=True)
 
 
-class DataPlot():
-
-    def __init__(self):
-        # target frame rate
-        self.target_fps = 10
-
-        # color map for keypoints
-        self.kp_colors = KP_COLORS.copy()
-
-    def _init_vars(self):
-        self.chirp_count = 0
-        self.chirp_active = False
-        self.chirp_point = None
-        self.step_count = 0
-        self.captured = False
-        self.tile_visited = np.zeros(len(self.targets)).astype(bool)
-
-    def _check_tile_visit(self, stop_point):
-        dist = np.linalg.norm(self.target_xy - stop_point.reshape([2, 1]), axis=0)
-        tile_visit = (dist <= TRIG_RADIUS)
-        if np.sum(tile_visit) > 0:
-            tile_index = np.where(tile_visit)[0][0]
-            self.tile_visited[tile_index] = True
-            self.targets[tile_index].set_facecolor('orange')
-
-    def _init_plot(self, ses_obj, trial_obj):
-        # create figure
-        self.fig = plt.figure(figsize=(32, 12))
-        gs = self.fig.add_gridspec(1, 3, width_ratios=[1, 1, 1])
-        self.axs = [self.fig.add_subplot(gs[i]) for i in range(3)]
-
-        # LEFT PLOT
-        ses_obj.draw_boundary(self.axs[0])
-        self.target_xy = ses_obj.target
-        self.targets = ses_obj.draw_target(self.axs[0], draw_hex=True)
-
-        # trajectory and target
-        self.ll, = self.axs[0].plot([], [], 'orange', alpha=0.25)
-
-        # put a cross on the current trial target
-        trial_target = trial_obj.trial_target
-        self.axs[0].scatter(*trial_target, s=125, alpha=0.5,
-                       marker='x', linewidths=3)
-
-        # mouse location
-        radius = 35
-        self.circle = plt.Circle((0, 0), radius, color='tab:blue',
-                                 linewidth=2, fill=False)
-        self.axs[0].add_patch(self.circle)
-
-        # write information
-        self.text = self.axs[0].text(20, -100, 'Chirps: 0, Tile Visit: 0', fontsize=12)
-
-        # LOW RES VIDEO
-        ls_init = ses_obj.get_frame(0, rgb=False)
-        self.im = self.axs[1].imshow(ls_init, cmap='gray')
-        self.axs[1].set_xlim(0, 1024)
-        self.axs[1].set_ylim(0, 1024)
-        self.axs[1].invert_xaxis()
-
-        # add an indicator for chirp
-        self.ind_right = self.axs[1].scatter(50, 50, s=625, marker='s', color='g', label='Chirp')
-        self.ind_right.set_visible(False)
-
-        # HIGH RES VIDEO
-        hs_init = ses_obj.hs_frame(0, rgb=True) if ses_obj.has_hs \
-            else np.zeros(ls_init.shape).astype(np.uint8)
-
-        self.im_hs = self.axs[2].imshow(hs_init, cmap='gray')
-        self.axs[2].set_xlim(0, 1024)
-        self.axs[2].set_ylim(0, 1024)
-        self.axs[2].invert_yaxis()
-
-        self.ind_hs = self.axs[2].scatter(974, 974, s=625, marker='s', color='g', label='Chirp')
-        self.ind_hs.set_visible(False)
-
-        # draw keypoints
-        if ses_obj.has_hs:
-            points = ses_obj.keypoints[:, 0].reshape(-1, 2)
-            conf = ses_obj.track_conf[:, 0] * 0.70 + 0.20
-            self.keypoints = self.axs[2].scatter(points[:, 0], points[:, 1],
-                                                c=self.kp_colors, alpha=conf,
-                                                marker='+')
-
-        # axis format
-        self.axs[0].set_xlim(-50, 2350)
-        self.axs[0].set_ylim(-150, 2250)
-        self.axs[0].set_aspect('equal')
-        self.axs[0].set_xlabel('X (mm)')
-        self.axs[0].set_ylabel('Y (mm)')
-        self.axs[0].spines[['right', 'top']].set_visible(False)
-
-        self.axs[1].axis('off')
-        self.axs[1].set_aspect('equal')
-
-        self.axs[2].axis('off')
-        self.axs[2].set_aspect('equal')
-
-        plt.tight_layout()
-
-    def select_color(self, index):
-        if index >= len(self.colors):
-            return self.colors[-1]
-
-        return self.colors[index]
-
-    def animate(self, ses_obj, i):
-        self.axs[0].set_title('Frame %d, Time %.3f Sec' % (i, ses_obj.time[i]))
-        self.text.set_text('# Chirps: %d, # of Tile Visit: %d' %
-                        (self.chirp_count, np.sum(self.tile_visited)))
-
-        if not self.captured:
-            if self.chirp_active:
-                self.step_count += 1
-                if self.step_count == 10:
-                    self.chirp_active = False
-                    self.chirp_point.set_facecolor('r')
-                    self.ind_right.set_visible(False)
-                    self.ind_hs.set_visible(False)
-                    self.step_count = 0
-
-            if ses_obj.chirped[i] == 1:
-                self.chirp_count += 1
-                self.chirp_active = True
-
-                self.chirp_point = self.targets[ses_obj.chirp_loc[i]]
-                self.chirp_point.set_facecolor('b')
-                self.ind_right.set_visible(True)
-                self.ind_hs.set_visible(True)
-
-                self._check_tile_visit(np.array([ses_obj.x[i], ses_obj.y[i]]))
-
-                self.axs[0].scatter(ses_obj.x[i], ses_obj.y[i], s=64, marker='o',
-                                    color=self.select_color(self.chirp_count - 1))
-
-            if ses_obj.triggered[i] == 1:
-                self.captured = True
-                self.ind_right.set_color('g')
-                self.ind_right.set_visible(True)
-                self.ind_hs.set_color('g')
-                self.ind_hs.set_visible(True)
-
-        # update trajectory
-        self.ll.set_data(ses_obj.x[self.start_idx:i], ses_obj.y[self.start_idx:i])
-        self.circle.center = (ses_obj.x[i], ses_obj.y[i])
-
-        # update video frames
-        self.im.set_data(ses_obj.get_frame(i, rgb=False))
-        if ses_obj.has_hs:
-            self.im_hs.set_data(ses_obj.hs_frame(i, rgb=True))
-
-        # update keypoints
-        if ses_obj.has_hs:
-            kp_index = ses_obj.hs_index[i]
-            if kp_index >= 0 and kp_index < ses_obj.hs_length:
-                points = ses_obj.keypoints[:, kp_index].reshape(-1, 2)
-                conf = ses_obj.track_conf[:, kp_index] * 0.80 + 0.10
-                self.keypoints.set_offsets(points)
-                self.keypoints.set_alpha(conf)
-
-    def render_frame(self):
-        '''
-        matplotlib canvas frame to RGB
-        '''
-        self.fig.canvas.draw()
-        frame = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
-        frame = frame.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
-        return frame
-
-    def render_video(self, ses_obj, trial_idx):
-        '''
-        Render video using OpenCV
-        '''
-        file_path = os.path.join('./data/Analysis', ses_obj.name, f'session_{ses_obj.session}')
-        file_name = 's%d_t%d' % (ses_obj.session, trial_idx) + '.mp4'
-
-        if not os.path.exists(file_path):
-            os.makedirs(file_path)
-
-        width, height = self.fig.canvas.get_width_height()
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        video_writer = cv2.VideoWriter(os.path.join(file_path, file_name),
-                                       fourcc, self.target_fps, (width, height))
-
-        # index shifted animation function
-        for i in tqdm.tqdm(range(self.n_frame), desc='Rendering Video'):
-            self.animate(ses_obj, i + self.start_idx)
-            frame = self.render_frame()
-            video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-
-        video_writer.release()
-        self.pbar.close()
-
-    def trial_video(self, ses_obj, trial_idx, eos=False):
-        '''
-        Generate a video for visualizing the trial
-        '''
-        # init data variables
-        trial_obj = ses_obj._construct_trial(trial_idx, eos=eos)
-        print('%s s%d, t%d' % (ses_obj.name, ses_obj.session, trial_idx))
-
-        self.start_idx, self.n_frame = ses_obj._frame_index(trial_idx, eos=eos)
-        _, self.n_frame_hunting = ses_obj._trial_index(trial_idx, eos=eos)
-
-        n_chip = ses_obj.chirped[self.start_idx:self.start_idx + self.n_frame_hunting].sum()
-        print('number of active chirps: %d' % n_chip)
-
-        # create a continous color map
-        self.colors = plt.cm.viridis(np.linspace(0, 1, n_chip + 1))
-
-        # init plotting
-        self._init_plot(ses_obj, trial_obj)
-        self._init_vars()
-
-        # create video
-        self.render_video(ses_obj, trial_idx)
-
-
 class TrialData(ArenaMap):
 
     def __init__(self, ses_ref, name, session, trial_idx, time,
@@ -776,3 +559,222 @@ class StopData(ArenaMap):
             delta = self.loc[:, 1:] - self.loc[:, :-1]
 
         return np.linalg.norm(delta, axis=0)
+
+
+# class for generating video visualization of the data
+class DataPlot():
+
+    def __init__(self):
+        # target frame rate
+        self.target_fps = 10
+
+        # color map for keypoints
+        self.kp_colors = KP_COLORS.copy()
+
+    def _init_vars(self):
+        self.chirp_count = 0
+        self.chirp_active = False
+        self.chirp_point = None
+        self.step_count = 0
+        self.captured = False
+        self.tile_visited = np.zeros(len(self.targets)).astype(bool)
+
+    def _init_plot(self, ses_obj, trial_obj):
+        # create figure
+        self.fig = plt.figure(figsize=(32, 12))
+        gs = self.fig.add_gridspec(1, 3, width_ratios=[1, 1, 1])
+        self.axs = [self.fig.add_subplot(gs[i]) for i in range(3)]
+
+        # LEFT PLOT
+        ses_obj.draw_boundary(self.axs[0])
+        self.target_xy = ses_obj.target
+        self.targets = ses_obj.draw_target(self.axs[0], alpha=0.0, draw_hex=True)
+
+        # trajectory and target
+        self.ll, = self.axs[0].plot([], [], 'orange', alpha=0.50)
+
+        # mark the current trial target
+        self.targets[trial_obj.trial_idx].set_alpha(0.75)
+        self.targets[trial_obj.trial_idx].set_facecolor('red')
+
+        # mouse location
+        radius = 35
+        self.circle = plt.Circle((0, 0), radius, color='tab:blue',
+                                 linewidth=2, fill=False)
+        self.axs[0].add_patch(self.circle)
+
+        # write information
+        self.text = self.axs[0].text(20, -100, 'Chirps: 0, Tile Visit: 0', fontsize=12)
+
+        # LOW RES VIDEO
+        ls_init = ses_obj.get_frame(0, rgb=False)
+        self.im = self.axs[1].imshow(ls_init, cmap='gray')
+        self.axs[1].set_xlim(0, 1024)
+        self.axs[1].set_ylim(0, 1024)
+        self.axs[1].invert_xaxis()
+
+        # add an indicator for chirp
+        self.ind_right = self.axs[1].scatter(50, 50, s=625, marker='s', color='g', label='Chirp')
+        self.ind_right.set_visible(False)
+
+        # HIGH RES VIDEO
+        hs_init = ses_obj.hs_frame(0, rgb=True) if ses_obj.has_hs \
+            else np.zeros(ls_init.shape).astype(np.uint8)
+
+        self.im_hs = self.axs[2].imshow(hs_init, cmap='gray')
+        self.axs[2].set_xlim(0, 1024)
+        self.axs[2].set_ylim(0, 1024)
+        self.axs[2].invert_yaxis()
+
+        self.ind_hs = self.axs[2].scatter(974, 974, s=625, marker='s', color='g', label='Chirp')
+        self.ind_hs.set_visible(False)
+
+        # draw keypoints
+        if ses_obj.has_hs:
+            points = ses_obj.keypoints[:, 0].reshape(-1, 2)
+            conf = ses_obj.track_conf[:, 0] * 0.80 + 0.20
+            self.keypoints = self.axs[2].scatter(points[:, 0], points[:, 1],
+                                                c=self.kp_colors, alpha=conf,
+                                                marker='+')
+
+        # axis format
+        self.axs[0].set_xlim(-50, 2350)
+        self.axs[0].set_ylim(-150, 2250)
+        self.axs[0].set_aspect('equal')
+        self.axs[0].set_xlabel('X (mm)')
+        self.axs[0].set_ylabel('Y (mm)')
+        self.axs[0].spines[['right', 'top']].set_visible(False)
+
+        self.axs[1].axis('off')
+        self.axs[1].set_aspect('equal')
+
+        self.axs[2].axis('off')
+        self.axs[2].set_aspect('equal')
+
+        plt.tight_layout()
+
+    def _check_tile_visit(self, stop_point):
+        dist = np.linalg.norm(self.target_xy - stop_point.reshape([2, 1]), axis=0)
+        tile_visit = (dist <= TRIG_RADIUS)
+        if np.sum(tile_visit) > 0:
+            tile_index = np.where(tile_visit)[0][0]
+            self.tile_visited[tile_index] = True
+            self.targets[tile_index].set_alpha(0.75)
+            self.targets[tile_index].set_facecolor('orange')
+
+    def select_color(self, index):
+        if index >= len(self.colors):
+            return self.colors[-1]
+
+        return self.colors[index]
+
+    def animate(self, ses_obj, i):
+        self.axs[0].set_title('Frame %d, Time %.3f Sec' % (i, ses_obj.time[i]))
+        self.text.set_text('# Chirps: %d, # of Tile Visit: %d' %
+                        (self.chirp_count, np.sum(self.tile_visited)))
+
+        if not self.captured:
+            if self.chirp_active:
+                self.step_count += 1
+                if self.step_count == 10:
+                    self.chirp_active = False
+                    self.chirp_point.set_facecolor('r')
+                    self.ind_right.set_visible(False)
+                    self.ind_hs.set_visible(False)
+                    self.step_count = 0
+
+            if ses_obj.chirped[i] == 1:
+                self.chirp_count += 1
+                self.chirp_active = True
+
+                self.chirp_point = self.targets[ses_obj.chirp_loc[i]]
+                self.chirp_point.set_facecolor('b')
+                self.ind_right.set_visible(True)
+                self.ind_hs.set_visible(True)
+
+                self._check_tile_visit(np.array([ses_obj.x[i], ses_obj.y[i]]))
+
+                self.axs[0].scatter(ses_obj.x[i], ses_obj.y[i], s=64, marker='o',
+                                    color=self.select_color(self.chirp_count - 1))
+
+            if ses_obj.triggered[i] == 1:
+                self.captured = True
+                self.ind_right.set_color('g')
+                self.ind_right.set_visible(True)
+                self.ind_hs.set_color('g')
+                self.ind_hs.set_visible(True)
+
+        # update trajectory
+        self.ll.set_data(ses_obj.x[self.start_idx:i], ses_obj.y[self.start_idx:i])
+        self.circle.center = (ses_obj.x[i], ses_obj.y[i])
+
+        # update video frames
+        self.im.set_data(ses_obj.get_frame(i, rgb=False))
+        if ses_obj.has_hs:
+            self.im_hs.set_data(ses_obj.hs_frame(i, rgb=True))
+
+        # update keypoints
+        if ses_obj.has_hs:
+            kp_index = ses_obj.hs_index[i]
+            if kp_index >= 0 and kp_index < ses_obj.hs_length:
+                points = ses_obj.keypoints[:, kp_index].reshape(-1, 2)
+                conf = ses_obj.track_conf[:, kp_index] * 0.80 + 0.20
+                self.keypoints.set_offsets(points)
+                self.keypoints.set_alpha(conf)
+
+    def render_frame(self):
+        '''
+        matplotlib canvas frame to RGB
+        '''
+        self.fig.canvas.draw()
+        frame = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
+        frame = frame.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
+        return frame
+
+    def render_video(self, ses_obj, trial_idx):
+        '''
+        Render video using OpenCV
+        '''
+        file_path = os.path.join('./data/Analysis', ses_obj.name, f'session_{ses_obj.session}')
+        file_name = 's%d_t%d' % (ses_obj.session, trial_idx) + '.mp4'
+
+        if not os.path.exists(file_path):
+            os.makedirs(file_path)
+
+        width, height = self.fig.canvas.get_width_height()
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        video_writer = cv2.VideoWriter(os.path.join(file_path, file_name),
+                                       fourcc, self.target_fps, (width, height))
+
+        # index shifted animation function
+        for i in tqdm.tqdm(range(self.n_frame), desc='Rendering Video'):
+            self.animate(ses_obj, i + self.start_idx)
+            frame = self.render_frame()
+            video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+
+        video_writer.release()
+
+    def trial_video(self, ses_obj, trial_idx, eos=False):
+        '''
+        Generate a video for visualizing the trial
+        '''
+        # init data variables
+        trial_obj = ses_obj._construct_trial(trial_idx, eos=eos)
+        print('%s s%d, t%d' % (ses_obj.name, ses_obj.session, trial_idx))
+
+        self.start_idx, self.n_frame = ses_obj._frame_index(trial_idx, eos=eos)
+        _, self.n_frame_hunting = ses_obj._trial_index(trial_idx, eos=eos)
+
+        n_chip = ses_obj.chirped[self.start_idx:self.start_idx + self.n_frame_hunting].sum()
+        print('number of active chirps: %d' % n_chip)
+
+        # create a continous color map
+        self.colors = plt.cm.viridis(np.linspace(0, 1,
+                                    n_chip * 2 + 1))[n_chip:]
+
+        # init plotting
+        self._init_plot(ses_obj, trial_obj)
+        self._init_vars()
+
+        # create video
+        self.render_video(ses_obj, trial_idx)
