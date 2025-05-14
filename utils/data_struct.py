@@ -156,6 +156,10 @@ class SessionData(ArenaMap):
         self.chirp_bout = self._int_array(df['chirp_bouts'].to_numpy())
         self.triggered = self._int_array(df['triggered'].to_numpy())
 
+        # cricket catch
+        self.n_catch = np.sum(self.triggered)
+        self.trigger_index = np.where(self.triggered == 1)[0]
+
         # video
         split_path = video_path.split('/')
         split_path[-1] = 'corrected_' + split_path[-1][:-4] + '.mp4'
@@ -176,16 +180,12 @@ class SessionData(ArenaMap):
         _, frame = self.hs.read()
         self.hs_shape = frame.shape
 
-        # calibration of hs camera
+        # calibration (time alignment) of hs camera
         self.calib_path = hs_path[:-4] + '_calib.csv'
         self._load_calib()
 
         # tracking data
         self.track_path = hs_path[:-4] + '.mat'
-
-        # cricket catch
-        self.n_catch = np.sum(self.triggered)
-        self.trigger_index = np.where(self.triggered == 1)[0]
 
     def _smooth_trajectory(self):
         # sampling rate = 17.8 Hz
@@ -222,6 +222,7 @@ class SessionData(ArenaMap):
         frame_rate = 120
 
         if os.path.exists(self.calib_path):
+            self.has_hs = True
             calib_array = pd.read_csv(self.calib_path)
             calib_axis = calib_array[['video_index',
                                       'zaber_index']].to_numpy().T
@@ -240,6 +241,7 @@ class SessionData(ArenaMap):
 
         else:
             self.hs_index = None
+            self.has_hs = False
 
     def _load_pose(self):
         if not os.path.exists(self.track_path):
@@ -314,6 +316,9 @@ class SessionData(ArenaMap):
         return cv2.resize(frame, (1024, 1024))[:, :, 0]
 
     def hs_frame(self, index, rgb=True, native=False):
+        if not self.has_hs:
+            return None
+
         if native:
             hs_index = index
         else:
@@ -409,7 +414,7 @@ class DataPlot():
         if np.sum(tile_visit) > 0:
             tile_index = np.where(tile_visit)[0][0]
             self.tile_visited[tile_index] = True
-            self.targets[tile_index].set_facecolor('g')
+            self.targets[tile_index].set_facecolor('orange')
 
     def _init_plot(self, ses_obj, trial_obj):
         # create figure
@@ -440,7 +445,8 @@ class DataPlot():
         self.text = self.axs[0].text(20, -100, 'Chirps: 0, Tile Visit: 0', fontsize=12)
 
         # LOW RES VIDEO
-        self.im = self.axs[1].imshow(ses_obj.get_frame(0, rgb=False), cmap='gray')
+        ls_init = ses_obj.get_frame(0, rgb=False)
+        self.im = self.axs[1].imshow(ls_init, cmap='gray')
         self.axs[1].set_xlim(0, 1024)
         self.axs[1].set_ylim(0, 1024)
         self.axs[1].invert_xaxis()
@@ -450,7 +456,10 @@ class DataPlot():
         self.ind_right.set_visible(False)
 
         # HIGH RES VIDEO
-        self.im_hs = self.axs[2].imshow(ses_obj.hs_frame(0, rgb=True), cmap='gray')
+        hs_init = ses_obj.hs_frame(0, rgb=True) if ses_obj.has_hs \
+            else np.zeros(ls_init.shape).astype(np.uint8)
+
+        self.im_hs = self.axs[2].imshow(hs_init, cmap='gray')
         self.axs[2].set_xlim(0, 1024)
         self.axs[2].set_ylim(0, 1024)
         self.axs[2].invert_yaxis()
@@ -459,11 +468,12 @@ class DataPlot():
         self.ind_hs.set_visible(False)
 
         # draw keypoints
-        points = ses_obj.keypoints[:, 0].reshape(-1, 2)
-        conf = ses_obj.track_conf[:, 0] * 0.70 + 0.20
-        self.keypoints = self.axs[2].scatter(points[:, 0], points[:, 1],
-                                             c=self.kp_colors, alpha=conf,
-                                             marker='+')
+        if ses_obj.has_hs:
+            points = ses_obj.keypoints[:, 0].reshape(-1, 2)
+            conf = ses_obj.track_conf[:, 0] * 0.70 + 0.20
+            self.keypoints = self.axs[2].scatter(points[:, 0], points[:, 1],
+                                                c=self.kp_colors, alpha=conf,
+                                                marker='+')
 
         # axis format
         self.axs[0].set_xlim(-50, 2350)
@@ -512,7 +522,7 @@ class DataPlot():
 
                 self._check_tile_visit(np.array([ses_obj.x[i], ses_obj.y[i]]))
 
-                self.axs[0].scatter(ses_obj.x[i], ses_obj.y[i], marker='s',
+                self.axs[0].scatter(ses_obj.x[i], ses_obj.y[i], marker='o',
                                     color=self.select_color(self.chirp_count - 1))
 
             if ses_obj.triggered[i] == 1:
@@ -529,15 +539,17 @@ class DataPlot():
 
         # display video frame
         self.im.set_data(ses_obj.get_frame(i, rgb=False))
-        self.im_hs.set_data(ses_obj.hs_frame(i, rgb=True))
+        if ses_obj.has_hs:
+            self.im_hs.set_data(ses_obj.hs_frame(i, rgb=True))
 
         # update keypoints
-        kp_index = ses_obj.hs_index[i]
-        if kp_index >= 0 and kp_index < ses_obj.hs_length:
-            points = ses_obj.keypoints[:, kp_index].reshape(-1, 2)
-            conf = ses_obj.track_conf[:, kp_index] * 0.80 + 0.10
-            self.keypoints.set_offsets(points)
-            self.keypoints.set_alpha(conf)
+        if ses_obj.has_hs:
+            kp_index = ses_obj.hs_index[i]
+            if kp_index >= 0 and kp_index < ses_obj.hs_length:
+                points = ses_obj.keypoints[:, kp_index].reshape(-1, 2)
+                conf = ses_obj.track_conf[:, kp_index] * 0.80 + 0.10
+                self.keypoints.set_offsets(points)
+                self.keypoints.set_alpha(conf)
 
         # update progress bar
         self.pbar.update(1)

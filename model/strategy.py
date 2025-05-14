@@ -15,7 +15,7 @@ class BayesMap:
         plt.colorbar(c, fraction=0.042, pad=0.05)
         ax.set_aspect('equal')
 
-    def __init__(self, x_range=(0, 2300), y_range=(-100, 2200), n_step=25, n_chunk=256):
+    def __init__(self, x_range=(0, 2300), y_range=(-100, 2200), n_step=25, n_chunk=128):
         '''
         Initialize the map
         '''
