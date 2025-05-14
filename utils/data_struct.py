@@ -479,6 +479,9 @@ class DataPlot():
         self.axs[0].set_xlim(-50, 2350)
         self.axs[0].set_ylim(-150, 2250)
         self.axs[0].set_aspect('equal')
+        self.axs[0].set_xlabel('X (mm)')
+        self.axs[0].set_ylabel('Y (mm)')
+        self.axs[0].spines[['right', 'top']].set_visible(False)
 
         self.axs[1].axis('off')
         self.axs[1].set_aspect('equal')
@@ -497,10 +500,9 @@ class DataPlot():
     def animate(self, ses_obj, i):
         self.axs[0].set_title('Frame %d, Time %.3f Sec' % (i, ses_obj.time[i]))
         self.text.set_text('# Chirps: %d, # of Tile Visit: %d' %
-                           (self.chirp_count, np.sum(self.tile_visited)))
+                        (self.chirp_count, np.sum(self.tile_visited)))
 
         if not self.captured:
-            # active -> inactive
             if self.chirp_active:
                 self.step_count += 1
                 if self.step_count == 10:
@@ -510,7 +512,6 @@ class DataPlot():
                     self.ind_hs.set_visible(False)
                     self.step_count = 0
 
-            # inactive -> active
             if ses_obj.chirped[i] == 1:
                 self.chirp_count += 1
                 self.chirp_active = True
@@ -522,22 +523,21 @@ class DataPlot():
 
                 self._check_tile_visit(np.array([ses_obj.x[i], ses_obj.y[i]]))
 
-                self.axs[0].scatter(ses_obj.x[i], ses_obj.y[i], marker='o',
+                self.axs[0].scatter(ses_obj.x[i], ses_obj.y[i], s=50, marker='o',
                                     color=self.select_color(self.chirp_count - 1))
 
             if ses_obj.triggered[i] == 1:
                 self.captured = True
-                # set indicators to green
                 self.ind_right.set_color('g')
                 self.ind_right.set_visible(True)
                 self.ind_hs.set_color('g')
                 self.ind_hs.set_visible(True)
 
-        # plot trajectory data
+        # update trajectory
         self.ll.set_data(ses_obj.x[self.start_idx:i], ses_obj.y[self.start_idx:i])
         self.circle.center = (ses_obj.x[i], ses_obj.y[i])
 
-        # display video frame
+        # update video frames
         self.im.set_data(ses_obj.get_frame(i, rgb=False))
         if ses_obj.has_hs:
             self.im_hs.set_data(ses_obj.hs_frame(i, rgb=True))
@@ -551,8 +551,38 @@ class DataPlot():
                 self.keypoints.set_offsets(points)
                 self.keypoints.set_alpha(conf)
 
-        # update progress bar
-        self.pbar.update(1)
+    def render_frame(self):
+        '''
+        matplotlib canvas frame to RGB
+        '''
+        self.fig.canvas.draw()
+        frame = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
+        frame = frame.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
+        return frame
+
+    def render_video(self, ses_obj, trial_idx):
+        '''
+        Render video using OpenCV
+        '''
+        file_path = os.path.join('./data/Analysis', ses_obj.name, f'session_{ses_obj.session}')
+        file_name = 's%d_t%d' % (ses_obj.session, trial_idx) + '.mp4'
+
+        if not os.path.exists(file_path):
+            os.makedirs(file_path)
+
+        width, height = self.fig.canvas.get_width_height()
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        video_writer = cv2.VideoWriter(os.path.join(file_path, file_name),
+                                       fourcc, self.target_fps, (width, height))
+
+        # index shifted animation function
+        for i in tqdm.tqdm(range(self.n_frame), desc='Rendering Video'):
+            self.animate(ses_obj, i + self.start_idx)
+            frame = self.render_frame()
+            video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+
+        video_writer.release()
+        self.pbar.close()
 
     def trial_video(self, ses_obj, trial_idx, eos=False):
         '''
@@ -574,30 +604,9 @@ class DataPlot():
         # init plotting
         self._init_plot(ses_obj, trial_obj)
         self._init_vars()
-        self.pbar = tqdm.tqdm(total=self.n_frame, position=0, leave=True)
 
         # create video
-        self.save_video(ses_obj, trial_idx)
-
-    def save_video(self, ses_obj, trial_idx):
-        # create video
-        # index shifted animation function
-        def animate_shifted(i): return self.animate(ses_obj, i + self.start_idx)
-        ani = animation.FuncAnimation(self.fig, animate_shifted,
-                                      frames=self.n_frame - 1,
-                                      interval=10)
-
-        # video path
-        file_path = os.path.join('./data/Analysis', ses_obj.name, f'session_{ses_obj.session}')
-        file_name = 's%d_t%d' % (ses_obj.session, trial_idx) + '.mp4'
-
-        if not os.path.exists(file_path):
-            os.makedirs(file_path)
-
-        # save video
-        writer = animation.writers['ffmpeg'](fps=self.target_fps, bitrate=4096)
-        ani.save(os.path.join(file_path, file_name), writer=writer)
-        self.pbar.close()
+        self.render_video(ses_obj, trial_idx)
 
 
 class TrialData(ArenaMap):
