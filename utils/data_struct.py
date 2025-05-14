@@ -15,7 +15,6 @@ from .plottools import KP_COLORS
 
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 from matplotlib import patches
 matplotlib.rcParams["image.origin"] = "lower"
 
@@ -580,6 +579,9 @@ class DataPlot():
         self.tile_visited = np.zeros(len(self.targets)).astype(bool)
 
     def _init_plot(self, ses_obj, trial_obj):
+        '''
+        Initialize the plot
+        '''
         # create figure
         self.fig = plt.figure(figsize=(32, 12))
         gs = self.fig.add_gridspec(1, 3, width_ratios=[1, 1, 1])
@@ -669,6 +671,9 @@ class DataPlot():
         return self.colors[index]
 
     def animate(self, ses_obj, i):
+        '''
+        Per frame update function
+        '''
         self.axs[0].set_title('Frame %d, Time %.3f Sec' % (i, ses_obj.time[i]))
         self.text.set_text('# Chirps: %d, # of Tile Visit: %d' %
                         (self.chirp_count, np.sum(self.tile_visited)))
@@ -724,7 +729,7 @@ class DataPlot():
 
     def render_frame(self):
         '''
-        matplotlib canvas frame to RGB
+        Matplotlib canvas frame to RGB
         '''
         self.fig.canvas.draw()
         frame = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
