@@ -1,12 +1,10 @@
 import numpy as np
 import pandas as pd
-import math, os
-import re
-from datetime import datetime
+import math, os, re, json
 
 import pathlib
-DIR_ROOT = pathlib.Path(__file__).parent.parent.resolve()
-DIR_HOME = pathlib.Path.home()
+DIR_ROOT = pathlib.Path(__file__).parent.parent.resolve() # Root directory of the project
+DATA_BASE = '/groups/dennis/dennislab/data/new_format' # Base directory for consolidated data
 
 # Unit Conversions
 ZEBER_TO_DLC = 1896 / 72248
@@ -15,6 +13,9 @@ DLC_TO_MM = ZABER_TO_MM / ZEBER_TO_DLC
 TRK_CTR = 948
 TRIG_RADIUS_ZABER = 5500
 TRIG_RADIUS = TRIG_RADIUS_ZABER * ZABER_TO_MM
+
+# 30 sec ISI
+ISI = 30
 
 # Tile Names
 TILE_NAMES = [
@@ -38,9 +39,6 @@ TILE_NAMES = [
 
 TILE_DICT = {name: idx for idx, name in enumerate(TILE_NAMES)}
 NAME_DICT = {idx: name for idx, name in enumerate(TILE_NAMES)}
-
-# 30 sec ISI
-ISI = 30
 
 def tile_angle():
     '''
@@ -85,79 +83,69 @@ ARENA_CENTER = (1150, 1067)
 # in counter-clockwise order
 VERT_TILE = [0, 34, 134, 156, 122, 22]
 
-# base directories for videos
-video_base = '/groups/dennis/dennislab/data/rig'
-track_base = '/groups/dennis/dennislab/data/hs_cam'
-hs_video = [x for x in os.listdir(track_base) if x.endswith('.mp4')]
+def _ts_to_dirname(ts):
+    '''Convert data.json timestamp to directory name suffix.
+    e.g. "2024-02-22T09_46_32" -> "2024-02-22-09-46-32"
+    '''
+    return ts.replace('T', '-').replace('_', '-')
 
-# Organize files for different mice cohorts
-def time_diff(time1, time2, format="%H_%M_%S"):
-    # Convert time strings to datetime.time objects
-    t1 = datetime.strptime(time1, format).time()
-    t2 = datetime.strptime(time2, "%H_%M_%S").time()
+def _build_data_index():
+    '''Read data.json and build ALL_DATA[mouse][phase] = [session_dir, ...]
+    Session types and cohort membership are derived from data.json.
+    Each entry is the full path to a session directory.
+    '''
+    with open(os.path.join(DATA_BASE, 'data.json')) as f:
+        data_json = json.load(f)
 
-    # Convert time objects to seconds since midnight
-    seconds1 = t1.hour * 3600 + t1.minute * 60 + t1.second
-    seconds2 = t2.hour * 3600 + t2.minute * 60 + t2.second
+    all_data = {}
 
-    # Calculate the difference in seconds
-    return abs(seconds1 - seconds2)
+    for cohort, phases in data_json.items():
+        # extract mouse names from cohort key
+        # e.g. "b12b13" -> ["b12", "b13"]
+        mice = re.findall(r'[a-z]\d+', cohort)
 
-def load_data(dict, base_dir):
-    base_dir = os.path.join(DIR_ROOT, base_dir)
-    fl_list = os.listdir(base_dir)
-    fl_list.sort()
-    for fl in fl_list:
-        # extract date, time, and mice id from the file name
-        # name format: 2024-02-22T09_46_32_p16_all_params_file.csv
-        date_str = fl[:10]
-        time_str = fl[11:19]
-        mice_str = fl[-23:-20]
+        for phase, timestamps in phases.items():
+            for ts in timestamps:
+                dir_suffix = _ts_to_dirname(ts)
+                for mouse in mice:
+                    dir_path = os.path.join(DATA_BASE, mouse,
+                                            f'{mouse}_{dir_suffix}')
+                    if os.path.isdir(dir_path):
+                        all_data.setdefault(mouse, {}).setdefault(phase, [])
+                        all_data[mouse][phase].append(dir_path)
+                        break
 
-        # find the folder with the same date
-        rig_folder = os.path.join(video_base, date_str.replace('-', ''))
+    return all_data
 
-        # find low-res video: read all files in the folder with .avi extension
-        rig_files = os.listdir(rig_folder)
-        video_files = [x for x in rig_files if x.startswith('video_basler_')
-                       and x.endswith('.avi')]
-        video_time = [time_diff(x[-12:-4], time_str) for x in video_files]
-        video_file = video_files[np.argmin(video_time)]
 
-        # find calibrated tile name
-        tile_files = [x for x in rig_files if x.startswith('location_inputs_')
-                      and re.search(r'\d{2}\.csv$', x)]
-        tile_time = [time_diff(x[-12:-4], time_str) for x in tile_files]
-        tile_file = tile_files[np.argmin(tile_time)]
+# Build the ALL_DATA index at module load time
+ALL_DATA = _build_data_index()
 
-        # find high-res video (for pose tracking)
-        videos = [x for x in hs_video if date_str.replace('-', '') in x]
-        video_time = [time_diff(x[9:15], time_str, format="%H%M%S") for x in videos]
+def get_animals():
+    '''Return list of all animal names.'''
+    return list(ALL_DATA.keys())
 
-        if len(video_time) == 0:
-            hs_file = 'None'
-        else:
-            hs_file = videos[np.argmin(video_time)]
+def get_session_types(animal_name):
+    '''Return list of session types available for a given animal.'''
+    return list(ALL_DATA[animal_name].keys())
 
-        # add file to list
-        dict[mice_str].append((os.path.join(base_dir, fl),
-                               os.path.join(rig_folder, video_file),
-                               os.path.join(track_base, hs_file),
-                               os.path.join(rig_folder, tile_file)))
+def load_session(animal_name, session_type, session_index):
+    '''Load a single SessionData object.'''
+    from .data_struct import SessionData
+    session_dir = ALL_DATA[animal_name][session_type][session_index]
+    return SessionData(animal_name, session_type, session_index, session_dir)
 
-# b12b13 (2023 Fall)
-B_MICE = {'b12': [], 'b13': []}
-base_dir = 'data/b12b13'
-load_data(B_MICE, base_dir)
+def load_sessions(animal_name, session_type):
+    '''Load SessionData objects for a given animal (or list of animals)
+    and session type.
 
-# p16p17p18 (2024 Spring)
-P_MICE = {'p16': [], 'p17': [], 'p18': []}
-base_dir = 'data/p16p17p18'
-load_data(P_MICE, base_dir)
+    If animal_name is a string, returns a list of SessionData.
+    If animal_name is a list, returns a dict of {name: [SessionData, ...]}.
+    '''
+    from .data_struct import SessionData
+    if isinstance(animal_name, list):
+        return {name: load_sessions(name, session_type)
+                for name in animal_name}
 
-# p16p17p18 (2024 Fall)
-P_MALE = {'p20': [], 'p21': []}
-base_dir = 'data/p20p21'
-load_data(P_MALE, base_dir)
-
-ALL_MICE = {**B_MICE, **P_MICE, **P_MALE}
+    return [SessionData(animal_name, session_type, idx, session_dir)
+            for idx, session_dir in enumerate(ALL_DATA[animal_name][session_type])]

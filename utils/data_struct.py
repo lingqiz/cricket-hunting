@@ -9,7 +9,7 @@ from scipy.signal import butter, filtfilt
 from matplotlib import colormaps
 
 from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI, TRK_CTR, TILE_CENTER, \
-    TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, VERT_TILE, TRIG_RADIUS, TILE_DICT, NAME_DICT
+    TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, VERT_TILE, TRIG_RADIUS, NAME_DICT
 
 from .plottools import KP_COLORS
 
@@ -119,12 +119,20 @@ class ArenaMap():
 
 class SessionData(ArenaMap):
 
-    def __init__(self, name, ses, df, video_path, hs_path, tile_path):
+    def __init__(self, animal_name, session_type, session_index, session_dir):
         super().__init__()
 
         # name and session
-        self.name = name
-        self.session = ses
+        self.name = animal_name
+        self.session_type = session_type
+        self.session = session_index
+        self.session_dir = session_dir
+
+        # resolve file paths from session directory
+        self._resolve_paths()
+
+        # load behavior CSV
+        df = pd.read_csv(self.csv_path, low_memory=False)
 
         # x-y corrdinates, use mm units
         self.zaber_x = df['zaber_x'].to_numpy() * ZABER_TO_MM
@@ -138,12 +146,9 @@ class SessionData(ArenaMap):
         self.y = self.zaber_y + self.dlc_y
         self._smooth_trajectory()
 
-        # cricket tiles
+        # cricket tiles (already CCF-aligned)
         zaber_target = self._target(df['locations'][0])
         self.target = zaber_target * ZABER_TO_MM
-
-        # align to CCF coordinates
-        self._align_ccf(tile_path)
 
         # time
         self.time = df['relative_time'].to_numpy()
@@ -161,36 +166,47 @@ class SessionData(ArenaMap):
         self.trigger_index = np.where(self.triggered == 1)[0]
 
         # video
-        split_path = video_path.split('/')
-        split_path[-1] = 'corrected_' + split_path[-1][:-4] + '.mp4'
-        corrected_path = '/'.join(split_path)
-        if os.path.exists(corrected_path):
-            self.video = cv2.VideoCapture(corrected_path)
-        else:
-            self.video = cv2.VideoCapture(video_path)
+        self.video = cv2.VideoCapture(self.video_path)
 
         # hs video and tracking
         # note pose data is not loaded by default
         # call _load_pose() to load tracking data
-        self.hs_path = hs_path
-        self.hs = cv2.VideoCapture(hs_path)
+        if self.hs_path and os.path.exists(self.hs_path):
+            self.has_hs = True
+            self.hs = cv2.VideoCapture(self.hs_path)
+            self.hs_length = int(self.hs.get(cv2.CAP_PROP_FRAME_COUNT))
+            self.hs.set(cv2.CAP_PROP_POS_FRAMES, 1)
+            _, frame = self.hs.read()
+            self.hs_shape = frame.shape
+            self._load_calib()
+        else:
+            self.has_hs = False
+            self.hs = None
+            self.hs_length = 0
+            self.hs_shape = None
+            self.hs_index = None
 
-        self.hs_length = int(self.hs.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.hs.set(cv2.CAP_PROP_POS_FRAMES, 1)
-        _, frame = self.hs.read()
-        self.hs_shape = frame.shape
+    def _find_file(self, suffix):
+        '''Find a file in the session directory by suffix.
+        Returns the full path, or None if not found.
+        '''
+        for f in os.listdir(self.session_dir):
+            if f.endswith(suffix):
+                return os.path.join(self.session_dir, f)
+        return None
 
-        # calibration (time alignment) of hs camera
-        self.calib_path = hs_path[:-4] + '_calib.csv'
-        self._load_calib()
-
-        # tracking data
-        self.track_path = hs_path[:-4] + '.mat'
+    def _resolve_paths(self):
+        '''Find key files in the session directory.'''
+        self.csv_path = self._find_file('_ccf_all_params_file.csv')
+        self.video_path = self._find_file('_rig.avi')
+        self.hs_path = self._find_file('_hs.mp4')
+        self.calib_path = self._find_file('_calib.csv')
+        self.track_path = self._find_file('_tracking.mat')
 
     def _smooth_trajectory(self):
-        # sampling rate = 17.8 Hz
-        # cutoff frequency = 4 Hz
-        fs = 17.8
+        # sampling rate = 15 Hz
+        # cutoff frequency = 5 Hz
+        fs = 15
         nyquist = 0.5 * fs
         cutoff = 4
         b, a = butter(N=2, Wn=cutoff/nyquist,
@@ -198,20 +214,6 @@ class SessionData(ArenaMap):
 
         self.x = filtfilt(b, a, self.x)
         self.y = filtfilt(b, a, self.y)
-
-    def _align_ccf(self, tile_path):
-        # calibrated tiles (first 6 target)
-        data_frame = pd.read_csv(tile_path, low_memory=False)
-        calib_name = list(data_frame.columns[:6])
-        calib_index = np.array([TILE_DICT[name] for name in calib_name])
-
-        ccf_referece = self.tiles[:, calib_index]
-        delta = np.median(self.target[:, :6] - ccf_referece, axis=1).reshape(-1, 1)
-
-        # shift the coordinates
-        self.target -= delta
-        self.x -= delta[0]
-        self.y -= delta[1]
 
     def _load_calib(self):
         '''

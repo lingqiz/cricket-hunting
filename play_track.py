@@ -4,9 +4,18 @@ import numpy as np
 import scipy.io
 import argparse
 from matplotlib import colormaps
-from utils.curation import *
+from simple_term_menu import TerminalMenu
+from utils.data_loader import load_session, get_animals, get_session_types, ALL_DATA
 
-BASE_PATH = '/groups/dennis/dennislab/data/hs_cam'
+'''
+Play back video with pose tracking overlay.
+
+Example usage:
+  python3 play_track.py -animal p16 -type hunting -session 0
+  python3 play_track.py -mode dual -animal b12 -type exploration -session 2
+
+Controls: p=pause, q=quit, w/s=speed up/down, d/a=skip forward/backward
+'''
 
 # set up color map
 num_points = 37
@@ -153,54 +162,55 @@ def dual_player(session_data):
         if key == ord('d'):
             frame_idx += 50
 
+def pick_from_menu(title, options):
+    '''Arrow-key menu. Returns (index, selected_option) or exits on abort.'''
+    menu = TerminalMenu(options, title=title)
+    idx = menu.show()
+    if idx is None:
+        print('Cancelled.')
+        sys.exit(0)
+    return idx, options[idx]
+
+def interactive_menu(mode):
+    '''Walk through animal -> session type -> session selection.'''
+    animals = get_animals()
+    _, animal = pick_from_menu('Select animal:', animals)
+
+    types = get_session_types(animal)
+    _, session_type = pick_from_menu('Select session type:', types)
+
+    n_sessions = len(ALL_DATA[animal][session_type])
+    labels = [f'session {i}' for i in range(n_sessions)]
+    session_idx, _ = pick_from_menu('Select session:', labels)
+
+    print(f'\nLoading {animal} / {session_type} / session {session_idx} ...')
+    return animal, session_type, session_idx, mode
+
 # Setup arguments
 parser = argparse.ArgumentParser(description='Play video tracking data')
 parser.add_argument('-mode', type=str, default='hs')
-parser.add_argument('-file_path', type=str, default=None)
 parser.add_argument('-animal', type=str, default=None)
+parser.add_argument('-type', type=str, default=None)
 parser.add_argument('-session', type=int, default=None)
 
 args = parser.parse_args()
 
-if args.mode == 'hs':
+# use interactive menu or command line arguments to select session
+if args.animal is None or args.type is None or args.session is None:
+    animal, session_type, session_idx, mode = interactive_menu(args.mode)
+else:
+    animal, session_type, session_idx, mode = (
+        args.animal, args.type, args.session, args.mode)
 
-    if args.file_path is not None:
-        file_path = args.file_path
-        video_path = os.path.join(BASE_PATH, file_path + '.mp4')
+# load session data and play video
+session_data = load_session(animal, session_type, session_idx)
+if not session_data.has_hs:
+    print(f'No high-speed video available for {animal} / {session_type} / session {session_idx}.')
+    sys.exit(1)
 
-        # load tracking data
-        track_path = os.path.join(BASE_PATH, file_path + '.mat')
-        tracking = scipy.io.loadmat(track_path)
-
-        # (n_points, (x, y), n_frame)
-        points = tracking['points']
-        points = points.reshape([-1, points.shape[-1]])
-        track_conf = tracking['conf'] - 1.0
-
-    else:
-        load_data([args.animal])
-
-        # load session data and play video
-        session = MICE_HUNTING[args.animal]
-
-        session_data = session[args.session]
-        session_data._load_pose()
-
-        video_path = session_data.hs_path
-        points = session_data.keypoints
-        track_conf = session_data.track_conf
-
-    # play video
-    hs_player(video_path, points, track_conf)
-
-# dual video player
-elif args.mode == 'dual':
-    load_data([args.animal])
-
-    # load session data and play video
-    session = MICE_HUNTING[args.animal]
-
-    session_data = session[args.session]
-    session_data._load_pose()
-
+session_data._load_pose()
+if mode == 'hs':
+    hs_player(session_data.hs_path, session_data.keypoints,
+              session_data.track_conf)
+elif mode == 'dual':
     dual_player(session_data)
