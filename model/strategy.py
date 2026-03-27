@@ -150,6 +150,12 @@ class BayesMap:
                   torch.tensor(p, dtype=torch.float32),
                   mode=mode)
 
+    def diffuse(self, sigma=2):
+        # Q: adjust temperature? spatial diffusion? keep log space?
+        norm_Z = self.Z - torch.max(self.Z)
+        norm_Z = torch.exp(norm_Z / sigma) * self.inbnd
+        self.Z = torch.log(norm_Z / (torch.sum(norm_Z)))
+
     def plot_llhd(self, loc, log_l, ax=None):
         if ax is None:
             fig = plt.figure(figsize=(6, 6))

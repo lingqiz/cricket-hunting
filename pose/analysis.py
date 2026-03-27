@@ -3,7 +3,6 @@ from enum import IntEnum
 
 import utils.plottools as plottools
 from utils.plottools import KP_COLORS
-
 from utils.data_loader import TRIG_RADIUS
 
 class Mouse(IntEnum):
