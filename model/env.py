@@ -1,4 +1,4 @@
-from utils.data_loader import ccf_map, TRIG_RADIUS
+from utils.constants import ccf_map, TRIG_RADIUS
 from utils.data_struct import ArenaMap
 import numpy as np
 

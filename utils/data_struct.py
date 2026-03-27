@@ -8,7 +8,7 @@ import scipy.io
 from scipy.signal import butter, filtfilt
 from matplotlib import colormaps
 
-from .data_loader import ZABER_TO_MM, DLC_TO_MM, ISI, TRK_CTR, TILE_CENTER, \
+from .constants import ZABER_TO_MM, DLC_TO_MM, ISI, TRK_CTR, TILE_CENTER, \
     TILE_RAD_MM, TILE_ANGLE, ARENA_CENTER, VERT_TILE, TRIG_RADIUS, NAME_DICT
 
 from .plottools import KP_COLORS

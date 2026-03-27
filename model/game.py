@@ -5,7 +5,7 @@ import numpy as np
 import time
 from .env import ModuloSim
 from .agent import GameAgent
-from utils.data_loader import TILE_RAD_MM
+from utils.constants import TILE_RAD_MM
 PKG_ROOT = pathlib.Path(__file__).parent.resolve()
 
 

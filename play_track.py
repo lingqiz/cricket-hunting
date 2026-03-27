@@ -193,7 +193,7 @@ def interactive_menu(mode):
 
 # Setup arguments
 parser = argparse.ArgumentParser(description='Play video tracking data')
-parser.add_argument('-mode', type=str, default='hs')
+parser.add_argument('-mode', type=str, default='dual')
 parser.add_argument('-animal', type=str, default=None)
 parser.add_argument('-type', type=str, default=None)
 parser.add_argument('-session', type=int, default=None)
