@@ -154,8 +154,8 @@ def annotate_hs_frame(frame, hs_frame_idx, session_data):
         color = active_color if is_active else text_color
         label_y = frame.shape[0] - y_offset - strip_height - border - 4
         label_x = frame.shape[1] - 610
-        outlined_text(frame, name.capitalize(), (label_x, label_y),
-                      0.6, color)
+        outlined_text(frame, f"{name.capitalize()} ({field})",
+                      (label_x, label_y), 0.6, color)
 
     return frame
 
