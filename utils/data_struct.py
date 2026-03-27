@@ -246,7 +246,7 @@ class SessionData(ArenaMap):
             self.has_hs = False
 
     def _load_pose(self):
-        if not os.path.exists(self.track_path):
+        if not self.track_path or not os.path.exists(self.track_path):
             self.pose = None
             return
 
@@ -268,6 +268,39 @@ class SessionData(ArenaMap):
                       btype='low', analog=False)
 
         self.keypoints = filtfilt(b, a, points, axis=-1)
+
+        # load behavior scores (e.g. scores_Rearing.mat, scores_Grooming.mat)
+        self._load_scores()
+
+        # check frame count consistency
+        n_track = self.keypoints.shape[-1]
+        if n_track != self.hs_length:
+            warnings.warn(f'Frame count mismatch: hs_video={self.hs_length}, '
+                          f'tracking={n_track}')
+        for name, data in self.scores.items():
+            n_scores = data['scores'].shape[0]
+            if n_scores != self.hs_length:
+                warnings.warn(f'Frame count mismatch: hs_video={self.hs_length}, '
+                              f'{name} scores={n_scores}')
+
+    def _load_scores(self):
+        '''Load behavior classification scores from scores_*.mat files.
+        Populates self.scores as a dict keyed by behavior name,
+        each containing "scores" and "postprocessed" arrays.
+        '''
+        self.scores = {}
+        files = os.listdir(self.session_dir)
+        for f in files:
+            if f.startswith('scores_') and f.endswith('.mat'):
+                mat = scipy.io.loadmat(os.path.join(self.session_dir, f))
+                name = str(mat['behaviorName'][0]).lower()
+                allScores = mat['allScores'][0, 0]
+                scores = allScores['scores'][0, 0].flatten()
+                scoreNorm = allScores['scoreNorm'][0, 0].flatten()
+                self.scores[name] = {
+                    'scores': np.clip(scores / scoreNorm, -1, 1),
+                    'postprocessed': allScores['postprocessed'][0, 0].flatten(),
+                }
 
     def to_trials(self, non_catch=False):
         if self.n_catch == 0:

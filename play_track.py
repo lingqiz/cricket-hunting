@@ -48,9 +48,31 @@ def draw_cross(frame, points, conf, size=4, thickness=2):
 
     return frame
 
+def annotate_hs_frame(frame, hs_frame_idx, session_data):
+    '''Draw pose keypoints and behavior scores on a high-speed camera frame.'''
+    text_color = (62, 176, 69)
+
+    # draw pose keypoints
+    points = session_data.keypoints[:, hs_frame_idx].reshape(-1, 2)
+    conf = session_data.track_conf[:, hs_frame_idx]
+    frame = draw_cross(frame, points, conf)
+
+    # draw behavior scores
+    for i, name in enumerate(sorted(session_data.scores.keys())):
+        score_arr = session_data.scores[name]['scores']
+        if hs_frame_idx < len(score_arr):
+            val = score_arr[hs_frame_idx]
+            active = session_data.scores[name]['postprocessed'][hs_frame_idx]
+            label_color = (0, 200, 255) if active else text_color
+            cv2.putText(frame, f"{name}: {val:.2f}",
+                        (10, 20 + i * 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, label_color, 1)
+
+    return frame
+
 # video playback
-def hs_player(video_path, pose_data, pose_conf):
-    cap = cv2.VideoCapture(video_path)
+def hs_player(session_data):
+    cap = cv2.VideoCapture(session_data.hs_path)
 
     if not cap.isOpened():
         print("Error: Could not open video.")
@@ -66,31 +88,28 @@ def hs_player(video_path, pose_data, pose_conf):
             ret, frame = cap.read()
             if not ret:
                 print("End of video.")
-                break  # Exit loop when video ends
+                break
 
-            # Draw pose on the frame
-            points = pose_data[:, frame_idx].reshape(-1, 2)
-            conf = pose_conf[:, frame_idx]
-            frame = draw_cross(frame, points, conf)
+            frame = annotate_hs_frame(frame, frame_idx, session_data)
 
-            # Write frame number and playback speed on the frame
+            # Write frame number and playback speed
             frame_text = f"Frame: {frame_idx}"
             speed_text = f"Speed: {1 / (delay / 1000):.2f} FPS"
-            cv2.putText(frame, frame_text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
-            cv2.putText(frame, speed_text, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+            cv2.putText(frame, frame_text, (10, frame.shape[0] - 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+            cv2.putText(frame, speed_text, (10, frame.shape[0] - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
 
-            # Display the frame
             cv2.imshow('Pose Tracking', frame)
             frame_idx += 1
 
         # Keyboard controls
-        key = cv2.waitKey(delay)  # Delay in milliseconds (adjust based on FPS)
+        key = cv2.waitKey(delay)
 
         if key == ord('q'):
             break
         elif key == ord('p'):
             paused = not paused
-
         elif key == ord('d'):
             frame_idx += 120
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
@@ -98,9 +117,8 @@ def hs_player(video_path, pose_data, pose_conf):
             frame_idx -= 120
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
         elif key == ord('l'):
-            frame_idx += 120 * 60 # Skip 1 minute
+            frame_idx += 120 * 60
             cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
-
         elif key == ord('w'):
             delay = delay // 2
         elif key == ord('s'):
@@ -111,13 +129,11 @@ def hs_player(video_path, pose_data, pose_conf):
 
 def dual_player(session_data):
     text_color = (62, 176, 69)
-    pose_data = session_data.keypoints
-    pose_conf = session_data.track_conf
 
     frame_idx = 0
     ref_frame = session_data.get_frame(frame_idx)
 
-    separator_width = 10  # Adjust this for more/less separation
+    separator_width = 10
     separator = np.full((ref_frame.shape[0], separator_width, 3),
                         (128, 128, 128), dtype=np.uint8)
 
@@ -129,11 +145,8 @@ def dual_player(session_data):
             high_res = session_data.hs_frame(frame_idx)
 
             if np.sum(high_res) > 0:
-                # Draw pose on the frame
-                pose_idx = session_data.hs_index[frame_idx]
-                points = pose_data[:, pose_idx].reshape(-1, 2)
-                conf = pose_conf[:, pose_idx]
-                high_res = draw_cross(high_res, points, conf)
+                hs_idx = session_data.hs_index[frame_idx]
+                high_res = annotate_hs_frame(high_res, hs_idx, session_data)
 
             high_res = cv2.resize(high_res, (low_res.shape[1], low_res.shape[0]))
 
@@ -148,7 +161,6 @@ def dual_player(session_data):
             cv2.putText(combined_frame, time_text, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
 
             cv2.imshow('Pose Tracking', combined_frame)
-            # Next frame
             frame_idx += 1
 
         # Delay in milliseconds (adjust based on FPS)
@@ -215,7 +227,6 @@ if not session_data.has_hs:
 
 session_data._load_pose()
 if mode == 'hs':
-    hs_player(session_data.hs_path, session_data.keypoints,
-              session_data.track_conf)
+    hs_player(session_data)
 elif mode == 'dual':
     dual_player(session_data)
