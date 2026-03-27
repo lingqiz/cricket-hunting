@@ -39,7 +39,7 @@ def draw_cross(frame, points, conf, size=4, thickness=2):
     """
     for i, (x, y) in enumerate(points):
         x, y = int(x), int(y)
-        if conf[i] >= 0.0:
+        if conf[i] >= 0.25:
             # Draw horizontal line of the cross with alpha based on confidence
             cv2.line(frame, (x - size, y), (x + size, y), colors[i], thickness)
 
@@ -188,7 +188,7 @@ def interactive_menu(mode):
         labels.append(f'session {i + 1}  ({date} {time})')
     session_idx, _ = pick_from_menu('Select session:', labels)
 
-    print(f'\nLoading {animal} / {session_type} / session {session_idx} ...')
+    print(f'\nLoading {animal} / {session_type} / session {session_idx + 1} ...')
     return animal, session_type, session_idx, mode
 
 # Setup arguments
