@@ -48,25 +48,114 @@ def draw_cross(frame, points, conf, size=4, thickness=2):
 
     return frame
 
-def annotate_hs_frame(frame, hs_frame_idx, session_data):
-    '''Draw pose keypoints and behavior scores on a high-speed camera frame.'''
-    text_color = (62, 176, 69)
+def score_to_color(val):
+    '''Map value in [-1, 1] to BGR color: blue (-1) -> white (0) -> red (1).
+    Also works for binary labels: 0 -> blue, 1 -> red.
+    '''
+    val = np.clip(val, -1, 1)
+    if val < 0:
+        # blue to white
+        t = val + 1  # 0 to 1
+        return (255, int(255 * t), int(255 * t))
+    else:
+        # white to red
+        t = 1 - val  # 1 to 0
+        return (int(255 * t), int(255 * t), 255)
 
-    # draw pose keypoints
+def label_to_color(val):
+    '''Map binary label to blue (0) or red (1).'''
+    if val > 0:
+        return (0, 0, 255)
+    else:
+        return (255, 0, 0)
+
+def draw_score_strip(frame, score_arr, hs_frame_idx, y_offset,
+                     is_label=False, strip_width=600, strip_height=20,
+                     window=1200, border=2):
+    '''Draw a rolling color strip for a behavior score.
+
+    Shows a +-5 second window (1200 frames at 120fps) centered on
+    the current frame. Each frame's value is mapped to a color.
+    A vertical line marks the current frame position.
+    '''
+    h, w = frame.shape[:2]
+    n_frames = len(score_arr)
+    color_fn = label_to_color if is_label else score_to_color
+
+    # window range
+    half = window // 2
+    start = hs_frame_idx - half
+
+    # build the strip directly at target width
+    strip = np.full((strip_height, strip_width, 3), 128, dtype=np.uint8)
+    for px in range(strip_width):
+        src_idx = start + int(px * window / strip_width)
+        if 0 <= src_idx < n_frames:
+            strip[:, px] = color_fn(score_arr[src_idx])
+
+    # position: right-aligned, at y_offset from bottom
+    x0 = w - strip_width - 10
+    y0 = h - y_offset - strip_height
+
+    # black border
+    cv2.rectangle(frame,
+                  (x0 - border, y0 - border),
+                  (x0 + strip_width + border, y0 + strip_height + border),
+                  (0, 0, 0), -1)
+
+    # paste strip onto frame
+    frame[y0:y0 + strip_height, x0:x0 + strip_width] = strip
+
+    # draw current frame marker (center line)
+    cx = x0 + strip_width // 2
+    cv2.line(frame, (cx, y0 - border), (cx, y0 + strip_height + border),
+             (255, 255, 255), 1)
+
+    return frame
+
+# toggle between 'score' and 'label' display
+show_label = False
+
+def outlined_text(frame, text, pos, scale, color, thickness=1):
+    '''Draw text with a black outline for readability.'''
+    cv2.putText(frame, text, pos, cv2.FONT_HERSHEY_SIMPLEX,
+                scale, (0, 0, 0), thickness + 1, cv2.LINE_AA)
+    cv2.putText(frame, text, pos, cv2.FONT_HERSHEY_SIMPLEX,
+                scale, color, thickness, cv2.LINE_AA)
+
+def annotate_hs_frame(frame, hs_frame_idx, session_data):
+    '''Draw pose keypoints and behavior score strips on a high-speed frame.'''
+    text_color = (220, 220, 220)
+    active_color = (0, 0, 255)
+
+    # draw pose keypoints first (behind the strips)
     points = session_data.keypoints[:, hs_frame_idx].reshape(-1, 2)
     conf = session_data.track_conf[:, hs_frame_idx]
     frame = draw_cross(frame, points, conf)
 
-    # draw behavior scores
-    for i, name in enumerate(sorted(session_data.scores.keys())):
-        score_arr = session_data.scores[name]['scores']
-        if hs_frame_idx < len(score_arr):
-            val = score_arr[hs_frame_idx]
-            active = session_data.scores[name]['postprocessed'][hs_frame_idx]
-            label_color = (0, 200, 255) if active else text_color
-            cv2.putText(frame, f"{name}: {val:.2f}",
-                        (10, 20 + i * 20),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, label_color, 1)
+    # draw behavior score strips on top
+    strip_height = 20
+    border = 2
+    label_height = 22
+    slot_height = strip_height + border * 2 + label_height
+    behavior_names = sorted(session_data.scores.keys())
+    field = 'label' if show_label else 'score'
+    for i, name in enumerate(behavior_names):
+        score_arr = session_data.scores[name][field]
+        label_arr = session_data.scores[name]['label']
+        y_offset = 10 + i * (slot_height + 4)
+        frame = draw_score_strip(frame, score_arr, hs_frame_idx,
+                                 y_offset, is_label=show_label,
+                                 strip_height=strip_height)
+
+        # label above the strip — red when behavior is active
+        is_active = (hs_frame_idx < len(label_arr)
+                     and label_arr[hs_frame_idx] > 0)
+        color = active_color if is_active else text_color
+        label_y = frame.shape[0] - y_offset - strip_height - border - 4
+        label_x = frame.shape[1] - 610
+        outlined_text(frame, name.capitalize(), (label_x, label_y),
+                      0.6, color)
 
     return frame
 
@@ -92,14 +181,6 @@ def hs_player(session_data):
 
             frame = annotate_hs_frame(frame, frame_idx, session_data)
 
-            # Write frame number and playback speed
-            frame_text = f"Frame: {frame_idx}"
-            speed_text = f"Speed: {1 / (delay / 1000):.2f} FPS"
-            cv2.putText(frame, frame_text, (10, frame.shape[0] - 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
-            cv2.putText(frame, speed_text, (10, frame.shape[0] - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
-
             cv2.imshow('Pose Tracking', frame)
             frame_idx += 1
 
@@ -123,12 +204,15 @@ def hs_player(session_data):
             delay = delay // 2
         elif key == ord('s'):
             delay = delay * 2
+        elif key == ord('b'):
+            global show_label
+            show_label = not show_label
 
     cap.release()
     cv2.destroyAllWindows()
 
 def dual_player(session_data):
-    text_color = (62, 176, 69)
+    text_color = (220, 220, 220)
 
     frame_idx = 0
     ref_frame = session_data.get_frame(frame_idx)
@@ -138,6 +222,7 @@ def dual_player(session_data):
                         (128, 128, 128), dtype=np.uint8)
 
     paused = False
+    speed = 1  # 1x = baseline speed (equivalent to old 4x real-time)
     while True:
 
         if not paused:
@@ -152,20 +237,25 @@ def dual_player(session_data):
 
             # Combine low-res and high-res frames side-by-side
             low_res = cv2.flip(low_res, -1)
-            combined_frame = np.hstack((low_res, separator, high_res))
 
-            # Add text
-            frame_text = f"Frame: {frame_idx}"
-            time_text = f"Time: {session_data.time[frame_idx]:.2f} sec"
-            cv2.putText(combined_frame, frame_text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
-            cv2.putText(combined_frame, time_text, (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+            # Add frame/time info to rig video (bottom-left, after flip)
+            h = low_res.shape[0]
+            outlined_text(low_res, f"Frame: {frame_idx}",
+                          (10, h - 40), 0.6, text_color)
+            outlined_text(low_res, f"Time: {session_data.time[frame_idx]:.2f} sec",
+                          (10, h - 15), 0.6, text_color)
+            outlined_text(low_res, f"Speed: {speed}x",
+                          (10, h - 65), 0.6, text_color)
+
+            combined_frame = np.hstack((low_res, separator, high_res))
 
             cv2.imshow('Pose Tracking', combined_frame)
             frame_idx += 1
 
-        # Delay in milliseconds (adjust based on FPS)
-        key = cv2.waitKey(int((session_data.time[frame_idx + 1] -
-                          session_data.time[frame_idx]) * 1000 / 4))
+        # Delay in milliseconds
+        dt = session_data.time[frame_idx + 1] - session_data.time[frame_idx]
+        delay = max(1, int(dt * 1000 / (4 * speed)))
+        key = cv2.waitKey(delay)
 
         if key == ord('q'):
             break
@@ -173,6 +263,15 @@ def dual_player(session_data):
             paused = not paused
         if key == ord('d'):
             frame_idx += 50
+        if key == ord('a'):
+            frame_idx = max(0, frame_idx - 50)
+        if key == ord('w'):
+            speed *= 2
+        if key == ord('s'):
+            speed = max(1, speed // 2)
+        if key == ord('b'):
+            global show_label
+            show_label = not show_label
 
 def pick_from_menu(title, options):
     '''Arrow-key menu. Returns (index, selected_option) or exits on abort.'''

@@ -278,7 +278,7 @@ class SessionData(ArenaMap):
             warnings.warn(f'Frame count mismatch: hs_video={self.hs_length}, '
                           f'tracking={n_track}')
         for name, data in self.scores.items():
-            n_scores = data['scores'].shape[0]
+            n_scores = data['score'].shape[0]
             if n_scores != self.hs_length:
                 warnings.warn(f'Frame count mismatch: hs_video={self.hs_length}, '
                               f'{name} scores={n_scores}')
@@ -298,8 +298,8 @@ class SessionData(ArenaMap):
                 scores = allScores['scores'][0, 0].flatten()
                 scoreNorm = allScores['scoreNorm'][0, 0].flatten()
                 self.scores[name] = {
-                    'scores': np.clip(scores / scoreNorm, -1, 1),
-                    'postprocessed': allScores['postprocessed'][0, 0].flatten(),
+                    'score': np.clip(scores / scoreNorm, -1, 1),
+                    'label': allScores['postprocessed'][0, 0].flatten(),
                 }
 
     def to_trials(self, non_catch=False):
