@@ -179,8 +179,13 @@ def interactive_menu(mode):
     types = get_session_types(animal)
     _, session_type = pick_from_menu('Select session type:', types)
 
-    n_sessions = len(ALL_DATA[animal][session_type])
-    labels = [f'session {i}' for i in range(n_sessions)]
+    session_dirs = ALL_DATA[animal][session_type]
+    labels = []
+    for i, d in enumerate(session_dirs):
+        dt_str = os.path.basename(d).split('_', 1)[1]  # "2024-03-12-12-04-01"
+        date = dt_str[:10]                               # "2024-03-12"
+        time = dt_str[11:].replace('-', ':')             # "12:04:01"
+        labels.append(f'session {i + 1}  ({date} {time})')
     session_idx, _ = pick_from_menu('Select session:', labels)
 
     print(f'\nLoading {animal} / {session_type} / session {session_idx} ...')
