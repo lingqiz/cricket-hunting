@@ -240,12 +240,9 @@ def dual_player(session_data):
 
             # Add frame/time info to rig video (bottom-left, after flip)
             h = low_res.shape[0]
-            outlined_text(low_res, f"Frame: {frame_idx}",
-                          (10, h - 40), 0.6, text_color)
-            outlined_text(low_res, f"Time: {session_data.time[frame_idx]:.2f} sec",
-                          (10, h - 15), 0.6, text_color)
-            outlined_text(low_res, f"Speed: {speed}x",
-                          (10, h - 65), 0.6, text_color)
+            outlined_text(low_res, f"Frame: {frame_idx}", (10, h - 40), 0.6, text_color)
+            outlined_text(low_res, f"Time: {session_data.time[frame_idx]:.2f} sec", (10, h - 15), 0.6, text_color)
+            outlined_text(low_res, f"Speed: {speed}x", (10, h - 65), 0.6, text_color)
 
             combined_frame = np.hstack((low_res, separator, high_res))
 

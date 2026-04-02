@@ -208,7 +208,7 @@ class SessionData(ArenaMap):
         # cutoff frequency = 5 Hz
         fs = 15
         nyquist = 0.5 * fs
-        cutoff = 4
+        cutoff = 5
         b, a = butter(N=2, Wn=cutoff/nyquist,
                       btype='low', analog=False)
 
@@ -277,6 +277,7 @@ class SessionData(ArenaMap):
         if n_track != self.hs_length:
             warnings.warn(f'Frame count mismatch: hs_video={self.hs_length}, '
                           f'tracking={n_track}')
+
         for name, data in self.scores.items():
             n_scores = data['score'].shape[0]
             if n_scores != self.hs_length:
