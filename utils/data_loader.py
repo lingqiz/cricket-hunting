@@ -1,4 +1,4 @@
-import os, re, json
+import os, json
 from .constants import *
 
 # Base directory for consolidated data
@@ -11,30 +11,20 @@ def _ts_to_dirname(ts):
     return ts.replace('T', '-').replace('_', '-')
 
 def _build_data_index():
-    '''Read data.json and build ALL_DATA[mouse][phase] = [session_dir, ...]
-    Session types and cohort membership are derived from data.json.
-    Each entry is the full path to a session directory.
+    '''Read data.json and build ALL_DATA[mouse][phase] = [session_dir, ...].
+    data.json is organized by animal name; each entry is the full path to
+    a session directory.
     '''
     with open(os.path.join(DATA_BASE, 'data.json')) as f:
         data_json = json.load(f)
 
     all_data = {}
-
-    for cohort, phases in data_json.items():
-        # extract mouse names from cohort key
-        # e.g. "b12b13" -> ["b12", "b13"]
-        mice = re.findall(r'[a-z]\d+', cohort)
-
+    for mouse, phases in data_json.items():
         for phase, timestamps in phases.items():
             for ts in timestamps:
-                dir_suffix = _ts_to_dirname(ts)
-                for mouse in mice:
-                    dir_path = os.path.join(DATA_BASE, mouse,
-                                            f'{mouse}_{dir_suffix}')
-                    if os.path.isdir(dir_path):
-                        all_data.setdefault(mouse, {}).setdefault(phase, [])
-                        all_data[mouse][phase].append(dir_path)
-                        break
+                dir_path = os.path.join(DATA_BASE, mouse,
+                                        f'{mouse}_{_ts_to_dirname(ts)}')
+                all_data.setdefault(mouse, {}).setdefault(phase, []).append(dir_path)
 
     return all_data
 
